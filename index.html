@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Mercado VE</title>
+    <link rel="manifest" href="manifest.json">
     <style>
-        <link rel="manifest" href="manifest.json">
         body { 
             font-family: Arial, sans-serif; 
             margin: 0; 
@@ -23,15 +23,31 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
         }
         h1 { color: #333; text-align: center; font-size: 24px; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 15px; }
+        
+        /* New Rates Box Design */
+        .rates-box {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .rates-box span { font-weight: bold; color: #0056b3; }
+
         .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
         input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
         button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         button:hover { background-color: #218838; }
         ul { list-style-type: none; padding: 0; margin: 0; }
-        li { background: #f9f9f9; padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        li { background: #f9f9f9; padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; margin-bottom: 5px; border-radius: 6px;}
+        
+        /* Updated Total Box Design */
         .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; }
         .total-box h3 { margin: 0; color: #2e7d32; font-size: 22px; }
+        .total-box h4 { margin: 5px 0 0 0; color: #555; font-size: 18px; }
     </style>
 </head>
 <body>
@@ -39,6 +55,11 @@
         <h1>🛒 Mercado VE</h1>
         <div class="subtitle">Tu lista de compras inteligente</div>
         
+        <div class="rates-box">
+            <div>BCV: <span id="tasaBCV">Cargando...</span></div>
+            <div>Binance: <span id="tasaBinance">Cargando...</span></div>
+        </div>
+
         <div class="input-group">
             <input type="text" id="itemName" placeholder="Producto (ej. Harina)">
             <input type="number" id="itemPrice" placeholder="Precio $" step="0.01">
@@ -48,12 +69,38 @@
         <ul id="list"></ul>
 
         <div class="total-box">
-            <h3>Total: $<span id="total">0.00</span></h3>
+            <h3>Total: $<span id="totalUSD">0.00</span></h3>
+            <h4>Bs: <span id="totalVES">0.00</span></h4>
         </div>
     </div>
 
     <script>
-        let total = 0;
+        let totalUSD = 0;
+        let tasaActual = 0; // Guardará la tasa de cambio para calcular los Bs
+
+        // Función para obtener las tasas de internet
+        async function fetchRates() {
+            try {
+                // Aquí usamos una API pública gratuita de la comunidad venezolana
+                const response = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar');
+                const data = await response.json();
+                
+                const bcv = data.monitors.bcv.price;
+                const binance = data.monitors.binance.price;
+
+                document.getElementById('tasaBCV').textContent = `Bs ${bcv.toFixed(2)}`;
+                document.getElementById('tasaBinance').textContent = `Bs ${binance.toFixed(2)}`;
+                
+                // Usaremos la tasa BCV por defecto para los cálculos
+                tasaActual = bcv;
+                updateTotals();
+
+            } catch (error) {
+                console.error("Error al obtener las tasas:", error);
+                document.getElementById('tasaBCV').textContent = "Error";
+                document.getElementById('tasaBinance').textContent = "Error";
+            }
+        }
 
         function addItem() {
             const nameInput = document.getElementById('itemName');
@@ -62,17 +109,14 @@
             const price = parseFloat(priceInput.value);
 
             if(name !== "" && price > 0) {
-                // Add item to the list visually
                 const list = document.getElementById('list');
                 const li = document.createElement('li');
                 li.innerHTML = `<span>${name}</span> <b>$${price.toFixed(2)}</b>`;
                 list.appendChild(li);
 
-                // Update the total
-                total += price;
-                document.getElementById('total').textContent = total.toFixed(2);
+                totalUSD += price;
+                updateTotals();
 
-                // Clear the inputs
                 nameInput.value = '';
                 priceInput.value = '';
                 nameInput.focus();
@@ -80,6 +124,16 @@
                 alert("Por favor, ingresa un producto y un precio válido.");
             }
         }
+
+        function updateTotals() {
+            document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
+            // Calcular el total en Bolívares
+            const totalVES = totalUSD * tasaActual;
+            document.getElementById('totalVES').textContent = totalVES.toFixed(2);
+        }
+
+        // Ejecutar la función de tasas al abrir la app
+        fetchRates();
     </script>
 </body>
 </html>
