@@ -30,10 +30,11 @@
         .rates-box { background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; justify-content: space-between; }
         .rates-box span { font-weight: bold; color: #0056b3; }
 
-        /* NUEVO DISEÑO PARA LOS INPUTS */
+        /* INPUTS AJUSTADOS PARA LA CANTIDAD */
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        .input-half { flex: 1 1 40%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         .input-full { flex: 1 1 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .input-qty { flex: 1 1 20%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; text-align: center; }
+        .input-price { flex: 1 1 50%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         
         button.add-btn { flex: 1 1 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button.add-btn:hover { background-color: #218838; }
@@ -41,7 +42,6 @@
         ul { list-style-type: none; padding: 0; margin: 0; }
         li { background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
         
-        /* ESTILO PARA EL BOTÓN DE BORRAR */
         .delete-btn { background: #ff4d4d; color: white; border: none; border-radius: 6px; padding: 8px 10px; margin-left: 10px; cursor: pointer; font-size: 14px;}
         .delete-btn:hover { background: #e60000; }
 
@@ -69,9 +69,14 @@
 
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
-                <input type="text" id="itemName" class="input-half" placeholder="Producto (ej. Harina)">
-                <input type="number" id="itemPrice" class="input-half" placeholder="Precio $" step="0.01">
-                <input type="text" id="storeName" class="input-full" placeholder="📍 Supermercado (ej. Gama, Forum)">
+                <datalist id="cat-productos"></datalist>
+                <datalist id="cat-supermercados"></datalist>
+
+                <input type="text" id="itemName" class="input-full" placeholder="Producto (ej. Harina PAN)" list="cat-productos">
+                <input type="number" id="itemQty" class="input-qty" placeholder="Cant." value="1" min="1">
+                <input type="number" id="itemPrice" class="input-price" placeholder="Precio Unidad $" step="0.01">
+                <input type="text" id="storeName" class="input-full" placeholder="📍 Supermercado (ej. Gama)" list="cat-supermercados">
+                
                 <button class="add-btn" onclick="window.addItem()">Agregar a la lista</button>
             </div>
             <ul id="list"></ul>
@@ -97,9 +102,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // TUS CLAVES DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -115,6 +119,35 @@
 
         let totalUSD = 0;
         let tasaActual = 0; 
+
+        // NUEVA FUNCIÓN: Aprender de la comunidad para autocompletar
+        window.aprenderDeLaComunidad = async function() {
+            try {
+                const q = query(collection(db, "productos_comunidad"));
+                const querySnapshot = await getDocs(q);
+                
+                let productosSet = new Set();
+                let supermercadosSet = new Set();
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if(data.producto) productosSet.add(data.producto);
+                    if(data.supermercado && data.supermercado !== "No especificado") supermercadosSet.add(data.supermercado);
+                });
+
+                const catProd = document.getElementById('cat-productos');
+                const catSup = document.getElementById('cat-supermercados');
+                catProd.innerHTML = '';
+                catSup.innerHTML = '';
+
+                // Llenar las sugerencias
+                productosSet.forEach(prod => catProd.innerHTML += `<option value="${prod}">`);
+                supermercadosSet.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
+                
+            } catch (error) {
+                console.error("Error cargando diccionario de sugerencias:", error);
+            }
+        }
 
         window.switchTab = function(tab) {
             document.getElementById('tab-lista').classList.remove('active');
@@ -162,8 +195,7 @@
                     listEl.innerHTML = '<li style="text-align: center; color: #999;">Aún no hay productos reportados.</li>';
                 }
             } catch (error) {
-                console.error("Error cargando comunidad:", error);
-                listEl.innerHTML = '<li style="text-align: center; color: red;">Error al conectar con la base de datos.</li>';
+                listEl.innerHTML = '<li style="text-align: center; color: red;">Error al conectar.</li>';
             }
         }
 
@@ -178,11 +210,10 @@
                 tasaActual = bcv;
                 window.updateTotals();
             } catch (error) {
-                let tasaManual = prompt("No se pudieron cargar las tasas. Ingresa la tasa BCV manual:");
+                let tasaManual = prompt("Ingresa la tasa BCV manual:");
                 if (tasaManual && !isNaN(parseFloat(tasaManual))) {
                     tasaActual = parseFloat(tasaManual);
                     document.getElementById('tasaBCV').textContent = `Bs ${tasaActual.toFixed(2)} (M)`;
-                    document.getElementById('tasaBinance').textContent = "N/A";
                     window.updateTotals();
                 }
             }
@@ -190,63 +221,63 @@
 
         window.addItem = async function() {
             const nameInput = document.getElementById('itemName');
+            const qtyInput = document.getElementById('itemQty');
             const priceInput = document.getElementById('itemPrice');
             const storeInput = document.getElementById('storeName');
             
             const name = nameInput.value;
+            const qty = parseInt(qtyInput.value) || 1; // Si está vacío, asume 1
             const price = parseFloat(priceInput.value);
             const store = storeInput.value || "No especificado";
 
-            if(name !== "" && price > 0) {
+            if(name !== "" && price > 0 && qty > 0) {
+                const itemTotalUSD = price * qty; // Multiplica precio por cantidad
+                
                 const list = document.getElementById('list');
                 const li = document.createElement('li');
                 
-                // Agregamos el diseño con el nombre, supermercado y el botón de borrar
                 li.innerHTML = `
                     <div style="display: flex; flex-direction: column;">
-                        <span>${name}</span>
+                        <span><b>${qty}x</b> ${name}</span>
                         <span style="font-size: 12px; color: #888;">📍 ${store}</span>
                     </div>
                     <div style="display: flex; align-items: center;">
-                        <b>$${price.toFixed(2)}</b>
-                        <button class="delete-btn" onclick="window.deleteItem(this, ${price})">🗑️</button>
+                        <b>$${itemTotalUSD.toFixed(2)}</b>
+                        <button class="delete-btn" onclick="window.deleteItem(this, ${itemTotalUSD})">🗑️</button>
                     </div>
                 `;
                 list.appendChild(li);
 
-                totalUSD += price;
+                totalUSD += itemTotalUSD;
                 window.updateTotals();
 
-                // Guardar en Firebase con el supermercado incluido
+                // Enviar a Firebase (solo guardamos el precio unitario para la comunidad)
                 try {
                     await addDoc(collection(db, "productos_comunidad"), {
                         producto: name,
-                        precioUSD: price,
+                        precioUSD: price, 
                         supermercado: store,
                         fecha: new Date()
                     });
+                    // Refrescar sugerencias con el nuevo producto
+                    window.aprenderDeLaComunidad();
                 } catch (e) {
                     console.error("Error guardando:", e);
                 }
 
                 nameInput.value = '';
+                qtyInput.value = '1';
                 priceInput.value = '';
-                // No borramos el nombre del supermercado por si sigues comprando en el mismo lugar
                 nameInput.focus();
             } else {
-                alert("Por favor, ingresa un producto y un precio válido.");
+                alert("Por favor, ingresa un producto, cantidad y precio válido.");
             }
         }
 
-        // NUEVA FUNCIÓN: Borrar producto y restar el total
-        window.deleteItem = function(btnElement, itemPrice) {
-            // Borra el elemento de la lista (el <li>)
+        window.deleteItem = function(btnElement, itemTotalUSD) {
             btnElement.parentElement.parentElement.remove();
-            
-            // Resta el precio al total
-            totalUSD -= itemPrice;
-            if(totalUSD < 0) totalUSD = 0; // Evita totales negativos por decimales
-            
+            totalUSD -= itemTotalUSD;
+            if(totalUSD < 0) totalUSD = 0; 
             window.updateTotals();
         }
 
@@ -255,7 +286,9 @@
             document.getElementById('totalVES').textContent = (totalUSD * tasaActual).toFixed(2);
         }
 
+        // Al iniciar la app: Cargar tasas y cargar el diccionario de sugerencias
         window.fetchRates();
+        window.aprenderDeLaComunidad();
     </script>
 </body>
 </html>
