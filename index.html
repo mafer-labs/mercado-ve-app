@@ -30,7 +30,6 @@
         .rates-box { background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; justify-content: space-between; }
         .rates-box span { font-weight: bold; color: #0056b3; }
 
-        /* INPUTS AJUSTADOS PARA LA CANTIDAD */
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .input-full { flex: 1 1 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         .input-qty { flex: 1 1 20%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; text-align: center; }
@@ -39,6 +38,10 @@
         button.add-btn { flex: 1 1 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button.add-btn:hover { background-color: #218838; }
         
+        /* Botón para vaciar la lista */
+        button.clear-btn { flex: 1 1 100%; padding: 12px; background-color: #ff4d4d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 15px; }
+        button.clear-btn:hover { background-color: #e60000; }
+
         ul { list-style-type: none; padding: 0; margin: 0; }
         li { background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
         
@@ -79,11 +82,15 @@
                 
                 <button class="add-btn" onclick="window.addItem()">Agregar a la lista</button>
             </div>
+            
             <ul id="list"></ul>
+            
             <div class="total-box">
                 <h3>Total: $<span id="totalUSD">0.00</span></h3>
                 <h4>Bs: <span id="totalVES">0.00</span></h4>
             </div>
+
+            <button class="clear-btn" onclick="window.vaciarLista()">🗑️ Vaciar Lista de Compras</button>
         </div>
 
         <div id="tab-comunidad" class="tab-content">
@@ -104,6 +111,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
+        // TUS CLAVES DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -120,7 +128,29 @@
         let totalUSD = 0;
         let tasaActual = 0; 
 
-        // NUEVA FUNCIÓN: Aprender de la comunidad para autocompletar
+        // === MAGIA DEL GUARDADO LOCAL ===
+        window.guardarLocal = function() {
+            localStorage.setItem('mercadoVE_lista', document.getElementById('list').innerHTML);
+            localStorage.setItem('mercadoVE_total', totalUSD);
+        }
+
+        window.cargarLocal = function() {
+            if(localStorage.getItem('mercadoVE_lista')) {
+                document.getElementById('list').innerHTML = localStorage.getItem('mercadoVE_lista');
+                totalUSD = parseFloat(localStorage.getItem('mercadoVE_total'));
+            }
+        }
+
+        window.vaciarLista = function() {
+            if(confirm("¿Estás seguro de que quieres vaciar tu carrito? Esto no borrará los precios de la comunidad.")) {
+                document.getElementById('list').innerHTML = '';
+                totalUSD = 0;
+                window.updateTotals();
+                window.guardarLocal();
+            }
+        }
+        // =================================
+
         window.aprenderDeLaComunidad = async function() {
             try {
                 const q = query(collection(db, "productos_comunidad"));
@@ -140,12 +170,11 @@
                 catProd.innerHTML = '';
                 catSup.innerHTML = '';
 
-                // Llenar las sugerencias
                 productosSet.forEach(prod => catProd.innerHTML += `<option value="${prod}">`);
                 supermercadosSet.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
                 
             } catch (error) {
-                console.error("Error cargando diccionario de sugerencias:", error);
+                console.error("Error cargando diccionario:", error);
             }
         }
 
@@ -165,7 +194,7 @@
             }
         }
 
-window.loadCommunity = async function() {
+        window.loadCommunity = async function() {
             const listEl = document.getElementById('comunidad-list');
             listEl.innerHTML = '<li style="text-align: center; color: #999;">Cargando precios...</li>';
             
@@ -195,9 +224,7 @@ window.loadCommunity = async function() {
                     listEl.innerHTML = '<li style="text-align: center; color: #999;">Aún no hay productos reportados.</li>';
                 }
             } catch (error) {
-                // AQUÍ ESTÁ LA MAGIA: Ahora nos dirá exactamente qué falla
-                listEl.innerHTML = '<li style="text-align: center; color: red;">Error: ' + error.message + '</li>';
-                alert("GOOGLE DICE: " + error.message);
+                listEl.innerHTML = '<li style="text-align: center; color: red;">Error al conectar.</li>';
             }
         }
 
@@ -228,12 +255,12 @@ window.loadCommunity = async function() {
             const storeInput = document.getElementById('storeName');
             
             const name = nameInput.value;
-            const qty = parseInt(qtyInput.value) || 1; // Si está vacío, asume 1
+            const qty = parseInt(qtyInput.value) || 1; 
             const price = parseFloat(priceInput.value);
             const store = storeInput.value || "No especificado";
 
             if(name !== "" && price > 0 && qty > 0) {
-                const itemTotalUSD = price * qty; // Multiplica precio por cantidad
+                const itemTotalUSD = price * qty; 
                 
                 const list = document.getElementById('list');
                 const li = document.createElement('li');
@@ -252,8 +279,8 @@ window.loadCommunity = async function() {
 
                 totalUSD += itemTotalUSD;
                 window.updateTotals();
+                window.guardarLocal(); // Guarda inmediatamente después de agregar
 
-                // Enviar a Firebase (solo guardamos el precio unitario para la comunidad)
                 try {
                     await addDoc(collection(db, "productos_comunidad"), {
                         producto: name,
@@ -261,7 +288,6 @@ window.loadCommunity = async function() {
                         supermercado: store,
                         fecha: new Date()
                     });
-                    // Refrescar sugerencias con el nuevo producto
                     window.aprenderDeLaComunidad();
                 } catch (e) {
                     console.error("Error guardando:", e);
@@ -281,6 +307,7 @@ window.loadCommunity = async function() {
             totalUSD -= itemTotalUSD;
             if(totalUSD < 0) totalUSD = 0; 
             window.updateTotals();
+            window.guardarLocal(); // Guarda inmediatamente después de borrar
         }
 
         window.updateTotals = function() {
@@ -288,9 +315,10 @@ window.loadCommunity = async function() {
             document.getElementById('totalVES').textContent = (totalUSD * tasaActual).toFixed(2);
         }
 
-        // Al iniciar la app: Cargar tasas y cargar el diccionario de sugerencias
-        window.fetchRates();
-        window.aprenderDeLaComunidad();
+        // AL INICIAR LA APP:
+        window.cargarLocal(); // 1. Recupera la lista guardada del teléfono
+        window.fetchRates();  // 2. Busca la tasa del dólar de hoy
+        window.aprenderDeLaComunidad(); // 3. Aprende las palabras nuevas
     </script>
 </body>
 </html>
