@@ -2,14 +2,17 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Calculadora Mercado VE</title>
     <link rel="manifest" href="manifest.json">
     <style>
+        /* ESTA LÍNEA ARREGLA EL PROBLEMA DEL TAMAÑO Y LOS BORDES */
+        * { box-sizing: border-box; }
+
         body { 
             font-family: Arial, sans-serif; 
             margin: 0; 
-            padding: 20px; 
+            padding: 15px; 
             background-color: #f4f4f9; 
             display: flex;
             justify-content: center;
@@ -25,7 +28,6 @@
         h1 { color: #333; text-align: center; font-size: 24px; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 15px; }
         
-        /* New Rates Box Design */
         .rates-box {
             background: #e9ecef;
             padding: 10px;
@@ -37,14 +39,36 @@
         }
         .rates-box span { font-weight: bold; color: #0056b3; }
 
-        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
-        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        /* NUEVO DISEÑO PARA LOS INPUTS Y EL BOTÓN */
+        .input-group { 
+            display: flex; 
+            flex-wrap: wrap; /* Permite que los elementos bajen de línea si no caben */
+            gap: 10px; 
+            margin-bottom: 20px; 
+        }
+        input { 
+            flex: 1 1 40%; /* Los inputs toman la mitad del espacio */
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            font-size: 16px; /* ESTO EVITA EL ZOOM AUTOMÁTICO EN IPHONE */
+        }
+        button { 
+            flex: 1 1 100%; /* El botón toma todo el ancho en la línea de abajo */
+            padding: 12px; 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px;
+        }
         button:hover { background-color: #218838; }
+        
         ul { list-style-type: none; padding: 0; margin: 0; }
         li { background: #f9f9f9; padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; margin-bottom: 5px; border-radius: 6px;}
         
-        /* Updated Total Box Design */
         .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; }
         .total-box h3 { margin: 0; color: #2e7d32; font-size: 22px; }
         .total-box h4 { margin: 5px 0 0 0; color: #555; font-size: 18px; }
@@ -63,7 +87,7 @@
         <div class="input-group">
             <input type="text" id="itemName" placeholder="Producto (ej. Harina)">
             <input type="number" id="itemPrice" placeholder="Precio $" step="0.01">
-            <button onclick="addItem()">Agregar</button>
+            <button onclick="addItem()">Agregar a la lista</button>
         </div>
 
         <ul id="list"></ul>
@@ -76,12 +100,10 @@
 
     <script>
         let totalUSD = 0;
-        let tasaActual = 0; // Guardará la tasa de cambio para calcular los Bs
+        let tasaActual = 0; 
 
-      // Función para obtener las tasas de internet o pedirla manualmente
         async function fetchRates() {
             try {
-                // Aquí usamos una API pública gratuita de la comunidad venezolana
                 const response = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar');
                 const data = await response.json();
                 
@@ -97,7 +119,6 @@
             } catch (error) {
                 console.error("Error al obtener las tasas:", error);
                 
-                // PLAN B: Falla la API, pedimos la tasa manual
                 let tasaManual = prompt("No se pudieron cargar las tasas de internet. Por favor, ingresa la tasa BCV de hoy (ej. 36.50):");
                 
                 if (tasaManual && !isNaN(parseFloat(tasaManual))) {
@@ -138,12 +159,10 @@
 
         function updateTotals() {
             document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
-            // Calcular el total en Bolívares
             const totalVES = totalUSD * tasaActual;
             document.getElementById('totalVES').textContent = totalVES.toFixed(2);
         }
 
-        // Ejecutar la función de tasas al abrir la app
         fetchRates();
     </script>
 </body>
