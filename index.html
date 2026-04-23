@@ -78,7 +78,7 @@
         let totalUSD = 0;
         let tasaActual = 0; // Guardará la tasa de cambio para calcular los Bs
 
-        // Función para obtener las tasas de internet
+      // Función para obtener las tasas de internet o pedirla manualmente
         async function fetchRates() {
             try {
                 // Aquí usamos una API pública gratuita de la comunidad venezolana
@@ -91,14 +91,25 @@
                 document.getElementById('tasaBCV').textContent = `Bs ${bcv.toFixed(2)}`;
                 document.getElementById('tasaBinance').textContent = `Bs ${binance.toFixed(2)}`;
                 
-                // Usaremos la tasa BCV por defecto para los cálculos
                 tasaActual = bcv;
                 updateTotals();
 
             } catch (error) {
                 console.error("Error al obtener las tasas:", error);
-                document.getElementById('tasaBCV').textContent = "Error";
-                document.getElementById('tasaBinance').textContent = "Error";
+                
+                // PLAN B: Falla la API, pedimos la tasa manual
+                let tasaManual = prompt("No se pudieron cargar las tasas de internet. Por favor, ingresa la tasa BCV de hoy (ej. 36.50):");
+                
+                if (tasaManual && !isNaN(parseFloat(tasaManual))) {
+                    tasaActual = parseFloat(tasaManual);
+                    document.getElementById('tasaBCV').textContent = `Bs ${tasaActual.toFixed(2)} (Manual)`;
+                    document.getElementById('tasaBinance').textContent = "N/A";
+                    updateTotals();
+                } else {
+                    document.getElementById('tasaBCV').textContent = "Error";
+                    document.getElementById('tasaBinance').textContent = "Error";
+                    alert("No se ingresó una tasa válida. Los cálculos en Bs serán 0.");
+                }
             }
         }
 
