@@ -15,7 +15,7 @@
             background-color: #f4f4f9; 
             display: flex;
             justify-content: center;
-            padding-bottom: 70px; /* Espacio para la barra inferior */
+            padding-bottom: 70px;
         }
         .container { 
             width: 100%;
@@ -30,42 +30,27 @@
         .rates-box { background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; justify-content: space-between; }
         .rates-box span { font-weight: bold; color: #0056b3; }
 
+        /* NUEVO DISEÑO PARA LOS INPUTS */
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1 1 40%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .input-half { flex: 1 1 40%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .input-full { flex: 1 1 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        
         button.add-btn { flex: 1 1 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button.add-btn:hover { background-color: #218838; }
         
         ul { list-style-type: none; padding: 0; margin: 0; }
-        li { background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+        li { background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
         
+        /* ESTILO PARA EL BOTÓN DE BORRAR */
+        .delete-btn { background: #ff4d4d; color: white; border: none; border-radius: 6px; padding: 8px 10px; margin-left: 10px; cursor: pointer; font-size: 14px;}
+        .delete-btn:hover { background: #e60000; }
+
         .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; }
         .total-box h3 { margin: 0; color: #2e7d32; font-size: 22px; }
         .total-box h4 { margin: 5px 0 0 0; color: #555; font-size: 18px; }
 
-        /* ESTILOS DE LA BARRA DE NAVEGACIÓN INFERIOR */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            width: 100%;
-            max-width: 400px;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 10px 0;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            border-top-left-radius: 15px;
-            border-top-right-radius: 15px;
-        }
-        .nav-item {
-            background: none;
-            border: none;
-            color: #666;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 10px;
-            width: 50%;
-        }
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); border-top-left-radius: 15px; border-top-right-radius: 15px; }
+        .nav-item { background: none; border: none; color: #666; font-size: 16px; font-weight: bold; cursor: pointer; padding: 10px; width: 50%; }
         .nav-item.active { color: #28a745; border-bottom: 3px solid #28a745; }
 
         .tab-content { display: none; }
@@ -84,8 +69,9 @@
 
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
-                <input type="text" id="itemName" placeholder="Producto (ej. Harina)">
-                <input type="number" id="itemPrice" placeholder="Precio $" step="0.01">
+                <input type="text" id="itemName" class="input-half" placeholder="Producto (ej. Harina)">
+                <input type="number" id="itemPrice" class="input-half" placeholder="Precio $" step="0.01">
+                <input type="text" id="storeName" class="input-full" placeholder="📍 Supermercado (ej. Gama, Forum)">
                 <button class="add-btn" onclick="window.addItem()">Agregar a la lista</button>
             </div>
             <ul id="list"></ul>
@@ -111,9 +97,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // TUS CLAVES INSERTADAS CORRECTAMENTE AQUÍ
+        // TUS CLAVES DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -151,15 +137,24 @@
             listEl.innerHTML = '<li style="text-align: center; color: #999;">Cargando precios...</li>';
             
             try {
-                const querySnapshot = await getDocs(collection(db, "productos_comunidad"));
+                const q = query(collection(db, "productos_comunidad"));
+                const querySnapshot = await getDocs(q);
                 listEl.innerHTML = ''; 
                 
                 let hayProductos = false;
                 querySnapshot.forEach((doc) => {
                     hayProductos = true;
                     const data = doc.data();
+                    const storeText = data.supermercado ? data.supermercado : "No especificado";
+                    
                     const li = document.createElement('li');
-                    li.innerHTML = `<span>${data.producto}</span> <b style="color: #28a745;">$${data.precioUSD.toFixed(2)}</b>`;
+                    li.innerHTML = `
+                        <div style="display: flex; flex-direction: column;">
+                            <span>${data.producto}</span>
+                            <span style="font-size: 12px; color: #888;">📍 ${storeText}</span>
+                        </div>
+                        <b style="color: #28a745;">$${data.precioUSD.toFixed(2)}</b>
+                    `;
                     listEl.appendChild(li);
                 });
 
@@ -183,15 +178,12 @@
                 tasaActual = bcv;
                 window.updateTotals();
             } catch (error) {
-                let tasaManual = prompt("No se pudieron cargar las tasas de internet. Por favor, ingresa la tasa BCV de hoy (ej. 36.50):");
+                let tasaManual = prompt("No se pudieron cargar las tasas. Ingresa la tasa BCV manual:");
                 if (tasaManual && !isNaN(parseFloat(tasaManual))) {
                     tasaActual = parseFloat(tasaManual);
                     document.getElementById('tasaBCV').textContent = `Bs ${tasaActual.toFixed(2)} (M)`;
                     document.getElementById('tasaBinance').textContent = "N/A";
                     window.updateTotals();
-                } else {
-                    document.getElementById('tasaBCV').textContent = "Error";
-                    document.getElementById('tasaBinance').textContent = "Error";
                 }
             }
         }
@@ -199,23 +191,38 @@
         window.addItem = async function() {
             const nameInput = document.getElementById('itemName');
             const priceInput = document.getElementById('itemPrice');
+            const storeInput = document.getElementById('storeName');
+            
             const name = nameInput.value;
             const price = parseFloat(priceInput.value);
+            const store = storeInput.value || "No especificado";
 
             if(name !== "" && price > 0) {
                 const list = document.getElementById('list');
                 const li = document.createElement('li');
-                li.innerHTML = `<span>${name}</span> <b>$${price.toFixed(2)}</b>`;
+                
+                // Agregamos el diseño con el nombre, supermercado y el botón de borrar
+                li.innerHTML = `
+                    <div style="display: flex; flex-direction: column;">
+                        <span>${name}</span>
+                        <span style="font-size: 12px; color: #888;">📍 ${store}</span>
+                    </div>
+                    <div style="display: flex; align-items: center;">
+                        <b>$${price.toFixed(2)}</b>
+                        <button class="delete-btn" onclick="window.deleteItem(this, ${price})">🗑️</button>
+                    </div>
+                `;
                 list.appendChild(li);
 
                 totalUSD += price;
                 window.updateTotals();
 
-                // Guardar en Firebase
+                // Guardar en Firebase con el supermercado incluido
                 try {
                     await addDoc(collection(db, "productos_comunidad"), {
                         producto: name,
                         precioUSD: price,
+                        supermercado: store,
                         fecha: new Date()
                     });
                 } catch (e) {
@@ -224,10 +231,23 @@
 
                 nameInput.value = '';
                 priceInput.value = '';
+                // No borramos el nombre del supermercado por si sigues comprando en el mismo lugar
                 nameInput.focus();
             } else {
                 alert("Por favor, ingresa un producto y un precio válido.");
             }
+        }
+
+        // NUEVA FUNCIÓN: Borrar producto y restar el total
+        window.deleteItem = function(btnElement, itemPrice) {
+            // Borra el elemento de la lista (el <li>)
+            btnElement.parentElement.parentElement.remove();
+            
+            // Resta el precio al total
+            totalUSD -= itemPrice;
+            if(totalUSD < 0) totalUSD = 0; // Evita totales negativos por decimales
+            
+            window.updateTotals();
         }
 
         window.updateTotals = function() {
