@@ -153,11 +153,18 @@
 
         window.aprenderDeLaComunidad = async function() {
             try {
+                // LISTA FIJA PARA CARACAS Y SAN ANTONIO
+                const supermercadosFijos = [
+                    "Gama", "Excelsior Gama", "Central Madeirense", "Unicasa", "Plaza's",
+                    "Forum", "Makro", "Redvital", "Hiper Líder", "Automercados San Diego",
+                    "Fresh Market", "Bio Mercados", "Luvebras", "Qué Papaya"
+                ];
+
                 const q = query(collection(db, "productos_comunidad"));
                 const querySnapshot = await getDocs(q);
                 
                 let productosSet = new Set();
-                let supermercadosSet = new Set();
+                let supermercadosSet = new Set(supermercadosFijos); // Iniciamos con los fijos
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -170,7 +177,10 @@
                 catProd.innerHTML = '';
                 catSup.innerHTML = '';
 
+                // Llenar sugerencias de productos
                 productosSet.forEach(prod => catProd.innerHTML += `<option value="${prod}">`);
+                
+                // Llenar sugerencias de supermercados (Fijos + Comunidad)
                 supermercadosSet.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
                 
             } catch (error) {
