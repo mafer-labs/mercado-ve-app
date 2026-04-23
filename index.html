@@ -165,7 +165,7 @@
             }
         }
 
-        window.loadCommunity = async function() {
+window.loadCommunity = async function() {
             const listEl = document.getElementById('comunidad-list');
             listEl.innerHTML = '<li style="text-align: center; color: #999;">Cargando precios...</li>';
             
@@ -195,7 +195,9 @@
                     listEl.innerHTML = '<li style="text-align: center; color: #999;">Aún no hay productos reportados.</li>';
                 }
             } catch (error) {
-                listEl.innerHTML = '<li style="text-align: center; color: red;">Error al conectar.</li>';
+                // AQUÍ ESTÁ LA MAGIA: Ahora nos dirá exactamente qué falla
+                listEl.innerHTML = '<li style="text-align: center; color: red;">Error: ' + error.message + '</li>';
+                alert("GOOGLE DICE: " + error.message);
             }
         }
 
