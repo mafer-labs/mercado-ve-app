@@ -21,15 +21,64 @@
             border-radius: 12px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
         }
-        h1 { color: #333; text-align: center; font-size: 24px; }
-        p { text-align: center; color: #666; }
+        h1 { color: #333; text-align: center; font-size: 24px; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 20px; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        button { padding: 10px 15px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #218838; }
+        ul { list-style-type: none; padding: 0; margin: 0; }
+        li { background: #f9f9f9; padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; }
+        .total-box h3 { margin: 0; color: #2e7d32; font-size: 22px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🛒 Mercado VE</h1>
-        <p>Tu lista de compras inteligente.</p>
-        <p><em>(Fase 1: Configuración inicial)</em></p>
+        <div class="subtitle">Tu lista de compras inteligente</div>
+        
+        <div class="input-group">
+            <input type="text" id="itemName" placeholder="Producto (ej. Harina)">
+            <input type="number" id="itemPrice" placeholder="Precio $" step="0.01">
+            <button onclick="addItem()">Agregar</button>
+        </div>
+
+        <ul id="list"></ul>
+
+        <div class="total-box">
+            <h3>Total: $<span id="total">0.00</span></h3>
+        </div>
     </div>
+
+    <script>
+        let total = 0;
+
+        function addItem() {
+            const nameInput = document.getElementById('itemName');
+            const priceInput = document.getElementById('itemPrice');
+            const name = nameInput.value;
+            const price = parseFloat(priceInput.value);
+
+            if(name !== "" && price > 0) {
+                // Add item to the list visually
+                const list = document.getElementById('list');
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${name}</span> <b>$${price.toFixed(2)}</b>`;
+                list.appendChild(li);
+
+                // Update the total
+                total += price;
+                document.getElementById('total').textContent = total.toFixed(2);
+
+                // Clear the inputs
+                nameInput.value = '';
+                priceInput.value = '';
+                nameInput.focus();
+            } else {
+                alert("Por favor, ingresa un producto y un precio válido.");
+            }
+        }
+    </script>
 </body>
 </html>
