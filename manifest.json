@@ -1,0 +1,16 @@
+{
+  "name": "Calculadora Mercado VE",
+  "short_name": "Mercado VE",
+  "description": "Tu lista de compras inteligente en USD y VES",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4f4f9",
+  "theme_color": "#28a745",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3081/3081840.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
