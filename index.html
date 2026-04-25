@@ -30,7 +30,6 @@
         .rates-box { background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; justify-content: space-between; }
         .rates-box span { font-weight: bold; color: #0056b3; }
 
-        /* AJUSTES DE LOS INPUTS PARA ACOMODAR LA MARCA */
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .input-full { flex: 1 1 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: white; }
         .input-brand { flex: 1 1 40%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
@@ -87,7 +86,7 @@
 
                 <select id="itemCat" class="input-full" onchange="window.verificarTipoProducto()">
                     <option value="" disabled selected>📦 Selecciona un Producto...</option>
-                    </select>
+                </select>
 
                 <input type="text" id="itemNameLibre" class="input-full" placeholder="Escribe tu producto personal..." style="display:none;">
                 <input type="text" id="itemBrand" class="input-brand" placeholder="Marca (Ej. PAN)">
@@ -133,9 +132,14 @@
     </div>
 
     <script type="module">
+        // 1. IMPORTAR LIBRERÍAS DE GOOGLE
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        
+        // 2. IMPORTAR TU CATÁLOGO EXTERNO
+        import { catalogoOficial, supermercadosFijos } from "./catalogo.js";
 
+        // TUS CLAVES DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -152,40 +156,27 @@
         let totalUSD = 0;
         let tasaActual = 0; 
 
-        // === 🛠️ CATÁLOGO DEL ADMINISTRADOR 🛠️ ===
-        // Aquí tú controlas los productos oficiales. Puedes agregar más aquí cuando quieras.
-        const catalogoOficial = [
-            "Aceite Vegetal", "Arroz Blanco", "Atún en Lata", "Azúcar",
-            "Café Molido", "Caraotas Negras", "Harina de Maíz", "Harina de Trigo",
-            "Huevos (Medio Cartón)", "Huevos (Cartón 30)", "Leche en Polvo",
-            "Leche Líquida", "Mantequilla / Margarina", "Mayonesa",
-            "Pasta Corta", "Pasta Larga", "Pollo Entero", "Queso Amarillo",
-            "Queso Blanco Duro", "Sal", "Salsa de Tomate"
-        ];
-
         window.inicializarCatalogos = function() {
             const selectProd = document.getElementById('itemCat');
-            // Cargar productos al menú desplegable
+            // Usar la lista que viene del archivo externo
             catalogoOficial.sort().forEach(prod => {
                 const option = document.createElement('option');
                 option.value = prod;
                 option.text = prod;
                 selectProd.appendChild(option);
             });
-            // Agregar la opción de escape personal al final
+            
             const optionOtro = document.createElement('option');
             optionOtro.value = "OTRO";
             optionOtro.text = "✏️ Otro (Solo para mi lista personal)";
             optionOtro.style.fontWeight = "bold";
             selectProd.appendChild(optionOtro);
 
-            // Cargar supermercados sugeridos
-            const supermercadosFijos = [ "Gama", "Excelsior Gama", "Central Madeirense", "Unicasa", "Plaza's", "Forum", "Makro", "Redvital", "Hiper Líder", "Automercados San Diego", "Fresh Market", "Bio Mercados", "Luvebras", "Qué Papaya" ];
+            // Usar la lista de supermercados externa
             const catSup = document.getElementById('cat-supermercados');
             supermercadosFijos.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
         }
 
-        // LÓGICA VISUAL: Mostrar u ocultar la marca dependiendo de si es "Otro"
         window.verificarTipoProducto = function() {
             const cat = document.getElementById('itemCat').value;
             if(cat === "OTRO") {
@@ -196,7 +187,6 @@
                 document.getElementById('itemBrand').style.display = "block";
             }
         }
-        // ==========================================
 
         window.guardarLocal = function() {
             localStorage.setItem('mercadoVE_lista', document.getElementById('list').innerHTML);
@@ -266,7 +256,6 @@
             }
         }
 
-        // === MAGIA: ACTUALIZACIÓN AUTOMÁTICA Y PRECIOS ORDENADOS ===
         window.loadCommunity = async function() {
             const listEl = document.getElementById('precios-list');
             listEl.innerHTML = '<p style="text-align: center; color: #999;">Cargando precios...</p>';
@@ -279,7 +268,6 @@
                 let todosLosDocs = [];
                 querySnapshot.forEach(doc => todosLosDocs.push(doc.data()));
 
-                // Ordenamos por fecha para que el precio más NUEVO pise al viejo automáticamente
                 todosLosDocs.sort((a, b) => {
                     if(!a.fecha || !b.fecha) return 0;
                     return a.fecha.seconds - b.fecha.seconds;
@@ -288,7 +276,7 @@
                 let productosAgrupados = {};
 
                 todosLosDocs.forEach((data) => {
-                    let nombreProd = data.producto; // Ya viene con la marca limpia
+                    let nombreProd = data.producto; 
                     let nombreSuper = data.supermercado ? data.supermercado.trim() : "No especificado";
 
                     if(!productosAgrupados[nombreProd]) productosAgrupados[nombreProd] = {};
@@ -393,19 +381,16 @@
             const price = parseFloat(priceInput.value);
             const store = storeInput.value || "No especificado";
 
-            // Validar que eligió algo
             if(cat === "") return alert("Por favor, selecciona un producto oficial o elige 'Otro'.");
 
-            // Determinar el nombre final y si se guarda en la comunidad
             let finalName = "";
             let enviarAComunidad = true;
 
             if(cat === "OTRO") {
                 if(libre === "") return alert("Ingresa el nombre de tu producto personal.");
                 finalName = libre;
-                enviarAComunidad = false; // 🚫 PROTECCIÓN: No va a Firebase
+                enviarAComunidad = false; 
             } else {
-                // Producto oficial: "Harina de Maíz (P.A.N.)"
                 finalName = brand !== "" ? `${cat} (${brand})` : cat;
             }
 
@@ -432,7 +417,6 @@
                 window.updateTotals();
                 window.guardarLocal(); 
 
-                // ENVIAR A FIREBASE SOLO SI ES OFICIAL
                 if(enviarAComunidad) {
                     try {
                         await addDoc(collection(db, "productos_comunidad"), {
@@ -444,13 +428,12 @@
                     } catch (e) {}
                 }
 
-                // Limpiar campos
                 catInput.value = "";
                 libreInput.value = "";
                 brandInput.value = "";
                 qtyInput.value = '1';
                 priceInput.value = '';
-                window.verificarTipoProducto(); // Restablecer la vista
+                window.verificarTipoProducto(); 
             } else {
                 alert("Por favor ingresa un precio válido.");
             }
@@ -469,7 +452,6 @@
             document.getElementById('totalVES').textContent = (totalUSD * tasaActual).toFixed(2);
         }
 
-        // AL INICIAR LA APP:
         window.inicializarCatalogos();
         window.cargarLocal(); 
         window.fetchRates();  
