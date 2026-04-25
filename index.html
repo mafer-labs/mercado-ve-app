@@ -38,26 +38,28 @@
         button.add-btn { flex: 1 1 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; }
         button.add-btn:hover { background-color: #218838; }
         
-        /* Botón para vaciar la lista */
-        button.clear-btn { flex: 1 1 100%; padding: 12px; background-color: #ff4d4d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; margin-top: 15px; }
-        button.clear-btn:hover { background-color: #e60000; }
-
+        .action-btns { display: flex; gap: 10px; margin-top: 15px; }
+        button.save-btn { flex: 1; padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        button.clear-btn { flex: 1; padding: 12px; background-color: #ff4d4d; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        
         ul { list-style-type: none; padding: 0; margin: 0; }
         li { background: #f9f9f9; padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
         
         .delete-btn { background: #ff4d4d; color: white; border: none; border-radius: 6px; padding: 8px 10px; margin-left: 10px; cursor: pointer; font-size: 14px;}
-        .delete-btn:hover { background: #e60000; }
 
         .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; }
         .total-box h3 { margin: 0; color: #2e7d32; font-size: 22px; }
         .total-box h4 { margin: 5px 0 0 0; color: #555; font-size: 18px; }
 
+        /* AHORA SON 3 BOTONES ABAJO */
         .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); border-top-left-radius: 15px; border-top-right-radius: 15px; }
-        .nav-item { background: none; border: none; color: #666; font-size: 16px; font-weight: bold; cursor: pointer; padding: 10px; width: 50%; }
+        .nav-item { background: none; border: none; color: #666; font-size: 14px; font-weight: bold; cursor: pointer; padding: 8px; width: 33.3%; }
         .nav-item.active { color: #28a745; border-bottom: 3px solid #28a745; }
 
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        .historial-card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -90,28 +92,37 @@
                 <h4>Bs: <span id="totalVES">0.00</span></h4>
             </div>
 
-            <button class="clear-btn" onclick="window.vaciarLista()">🗑️ Vaciar Lista de Compras</button>
+            <div class="action-btns">
+                <button class="save-btn" onclick="window.guardarHistorial()">💾 Guardar Lista</button>
+                <button class="clear-btn" onclick="window.vaciarLista()">🗑️ Vaciar</button>
+            </div>
         </div>
 
         <div id="tab-comunidad" class="tab-content">
             <h3 style="color: #333; margin-top: 0;">Precios de la Comunidad 🌎</h3>
-            <p style="font-size: 14px; color: #666;">Descubre a cuánto están comprando los demás.</p>
+            <p style="font-size: 14px; color: #666;">Sin repetidos. Mostrando siempre el mejor reporte.</p>
             <ul id="comunidad-list">
                 <li style="text-align: center; color: #999;">Cargando precios...</li>
             </ul>
         </div>
+
+        <div id="tab-historial" class="tab-content">
+            <h3 style="color: #333; margin-top: 0;">Mis Listas Guardadas 📚</h3>
+            <p style="font-size: 14px; color: #666;">Crea listas por supermercado o guarda tus compras pasadas.</p>
+            <div id="historial-list"></div>
+        </div>
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-item active" id="btn-lista" onclick="window.switchTab('lista')">📝 Mi Lista</button>
-        <button class="nav-item" id="btn-comunidad" onclick="window.switchTab('comunidad')">🌎 Comunidad</button>
+        <button class="nav-item active" id="btn-lista" onclick="window.switchTab('lista')">📝 Lista</button>
+        <button class="nav-item" id="btn-comunidad" onclick="window.switchTab('comunidad')">🌎 Comu.</button>
+        <button class="nav-item" id="btn-historial" onclick="window.switchTab('historial')">📚 Historial</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-        // TUS CLAVES DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -128,7 +139,7 @@
         let totalUSD = 0;
         let tasaActual = 0; 
 
-        // === MAGIA DEL GUARDADO LOCAL ===
+        // === GUARDADO LOCAL Y VACIADO ===
         window.guardarLocal = function() {
             localStorage.setItem('mercadoVE_lista', document.getElementById('list').innerHTML);
             localStorage.setItem('mercadoVE_total', totalUSD);
@@ -141,19 +152,140 @@
             }
         }
 
-        window.vaciarLista = function() {
-            if(confirm("¿Estás seguro de que quieres vaciar tu carrito? Esto no borrará los precios de la comunidad.")) {
+        window.vaciarLista = function(sinPreguntar = false) {
+            if(sinPreguntar || confirm("¿Estás seguro de que quieres vaciar tu carrito actual?")) {
                 document.getElementById('list').innerHTML = '';
                 totalUSD = 0;
                 window.updateTotals();
                 window.guardarLocal();
             }
         }
-        // =================================
+
+        // === NUEVO: GUARDAR EN HISTORIAL ===
+        window.guardarHistorial = function() {
+            if(totalUSD === 0) {
+                alert("No puedes guardar una lista vacía.");
+                return;
+            }
+            
+            let nombreLista = prompt("Nombra esta lista (Ej: 'Compras Gama', 'Quincena', 'Fiesta'):");
+            
+            if(nombreLista) {
+                let historial = JSON.parse(localStorage.getItem('mercadoVE_historial')) || [];
+                const nuevaCompra = {
+                    id: Date.now(),
+                    nombre: nombreLista,
+                    fecha: new Date().toLocaleDateString(),
+                    html: document.getElementById('list').innerHTML,
+                    total: totalUSD
+                };
+                
+                historial.push(nuevaCompra);
+                localStorage.setItem('mercadoVE_historial', JSON.stringify(historial));
+                
+                alert("¡Lista guardada con éxito!");
+                window.vaciarLista(true); // Vaciamos la pantalla actual sin preguntar
+                window.renderHistorial(); // Actualizamos la pestaña de historial
+                window.switchTab('historial'); // Llevamos al usuario a ver su lista guardada
+            }
+        }
+
+        // === NUEVO: RENDERIZAR HISTORIAL ===
+        window.renderHistorial = function() {
+            const histList = document.getElementById('historial-list');
+            let historial = JSON.parse(localStorage.getItem('mercadoVE_historial')) || [];
+
+            if(historial.length === 0) {
+                histList.innerHTML = '<p style="text-align:center; color:#999;">Aún no tienes listas guardadas.</p>';
+                return;
+            }
+
+            histList.innerHTML = '';
+            
+            // Volteamos el array para que las más nuevas salgan arriba
+            historial.slice().reverse().forEach(compra => {
+                const div = document.createElement('div');
+                div.className = 'historial-card';
+                div.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
+                        <b style="color:#0056b3;">📝 ${compra.nombre}</b>
+                        <span style="font-size:12px; color:#666;">${compra.fecha}</span>
+                    </div>
+                    <ul style="margin-bottom:10px;">${compra.html}</ul>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 10px;">
+                        <b style="color:#28a745; font-size: 18px;">Total: $${compra.total.toFixed(2)}</b>
+                        <button onclick="window.borrarHistorial(${compra.id})" style="background:#ff4d4d; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Borrar</button>
+                    </div>
+                `;
+                
+                // Limpieza visual: quitamos los botoncitos rojos de papelera dentro de las listas guardadas para que no se vean feas
+                const deleteBtns = div.querySelectorAll('.delete-btn');
+                deleteBtns.forEach(btn => btn.remove());
+
+                histList.appendChild(div);
+            });
+        }
+
+        window.borrarHistorial = function(id) {
+            if(confirm("¿Seguro que deseas eliminar este historial para siempre?")) {
+                let historial = JSON.parse(localStorage.getItem('mercadoVE_historial')) || [];
+                historial = historial.filter(c => c.id !== id);
+                localStorage.setItem('mercadoVE_historial', JSON.stringify(historial));
+                window.renderHistorial();
+            }
+        }
+
+        // === COMUNIDAD CON FILTRO DE DUPLICADOS ===
+        window.loadCommunity = async function() {
+            const listEl = document.getElementById('comunidad-list');
+            listEl.innerHTML = '<li style="text-align: center; color: #999;">Cargando precios...</li>';
+            
+            try {
+                const q = query(collection(db, "productos_comunidad"));
+                const querySnapshot = await getDocs(q);
+                listEl.innerHTML = ''; 
+                
+                // Diccionario para agrupar productos y evitar repetidos
+                let productosAgrupados = {};
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const nombreProd = data.producto.toLowerCase().trim();
+                    const nombreSuper = data.supermercado ? data.supermercado.toLowerCase().trim() : "no especificado";
+                    
+                    // Creamos una clave única: "harina pan - gama"
+                    const claveUnica = `${nombreProd}-${nombreSuper}`;
+
+                    // Guardamos el producto. Si ya existe uno igual, lo sobreescribe (así queda el más reciente)
+                    productosAgrupados[claveUnica] = data;
+                });
+
+                // Convertimos el diccionario agrupado de vuelta a una lista
+                const itemsLimpio = Object.values(productosAgrupados);
+
+                if(itemsLimpio.length === 0) {
+                    listEl.innerHTML = '<li style="text-align: center; color: #999;">Aún no hay productos reportados.</li>';
+                } else {
+                    itemsLimpio.forEach(data => {
+                        const storeText = data.supermercado ? data.supermercado : "No especificado";
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div style="display: flex; flex-direction: column;">
+                                <span>${data.producto}</span>
+                                <span style="font-size: 12px; color: #888;">📍 ${storeText}</span>
+                            </div>
+                            <b style="color: #28a745;">$${data.precioUSD.toFixed(2)}</b>
+                        `;
+                        listEl.appendChild(li);
+                    });
+                }
+            } catch (error) {
+                listEl.innerHTML = '<li style="text-align: center; color: red;">Error al conectar.</li>';
+            }
+        }
 
         window.aprenderDeLaComunidad = async function() {
             try {
-                // LISTA FIJA PARA CARACAS Y SAN ANTONIO
                 const supermercadosFijos = [
                     "Gama", "Excelsior Gama", "Central Madeirense", "Unicasa", "Plaza's",
                     "Forum", "Makro", "Redvital", "Hiper Líder", "Automercados San Diego",
@@ -164,7 +296,7 @@
                 const querySnapshot = await getDocs(q);
                 
                 let productosSet = new Set();
-                let supermercadosSet = new Set(supermercadosFijos); // Iniciamos con los fijos
+                let supermercadosSet = new Set(supermercadosFijos);
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -177,64 +309,31 @@
                 catProd.innerHTML = '';
                 catSup.innerHTML = '';
 
-                // Llenar sugerencias de productos
                 productosSet.forEach(prod => catProd.innerHTML += `<option value="${prod}">`);
-                
-                // Llenar sugerencias de supermercados (Fijos + Comunidad)
                 supermercadosSet.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
-                
-            } catch (error) {
-                console.error("Error cargando diccionario:", error);
-            }
+            } catch (error) {}
         }
 
         window.switchTab = function(tab) {
             document.getElementById('tab-lista').classList.remove('active');
             document.getElementById('tab-comunidad').classList.remove('active');
+            document.getElementById('tab-historial').classList.remove('active');
+            
             document.getElementById('btn-lista').classList.remove('active');
             document.getElementById('btn-comunidad').classList.remove('active');
+            document.getElementById('btn-historial').classList.remove('active');
 
             if (tab === 'lista') {
                 document.getElementById('tab-lista').classList.add('active');
                 document.getElementById('btn-lista').classList.add('active');
-            } else {
+            } else if (tab === 'comunidad') {
                 document.getElementById('tab-comunidad').classList.add('active');
                 document.getElementById('btn-comunidad').classList.add('active');
                 window.loadCommunity(); 
-            }
-        }
-
-        window.loadCommunity = async function() {
-            const listEl = document.getElementById('comunidad-list');
-            listEl.innerHTML = '<li style="text-align: center; color: #999;">Cargando precios...</li>';
-            
-            try {
-                const q = query(collection(db, "productos_comunidad"));
-                const querySnapshot = await getDocs(q);
-                listEl.innerHTML = ''; 
-                
-                let hayProductos = false;
-                querySnapshot.forEach((doc) => {
-                    hayProductos = true;
-                    const data = doc.data();
-                    const storeText = data.supermercado ? data.supermercado : "No especificado";
-                    
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <div style="display: flex; flex-direction: column;">
-                            <span>${data.producto}</span>
-                            <span style="font-size: 12px; color: #888;">📍 ${storeText}</span>
-                        </div>
-                        <b style="color: #28a745;">$${data.precioUSD.toFixed(2)}</b>
-                    `;
-                    listEl.appendChild(li);
-                });
-
-                if(!hayProductos) {
-                    listEl.innerHTML = '<li style="text-align: center; color: #999;">Aún no hay productos reportados.</li>';
-                }
-            } catch (error) {
-                listEl.innerHTML = '<li style="text-align: center; color: red;">Error al conectar.</li>';
+            } else {
+                document.getElementById('tab-historial').classList.add('active');
+                document.getElementById('btn-historial').classList.add('active');
+                window.renderHistorial();
             }
         }
 
@@ -289,7 +388,7 @@
 
                 totalUSD += itemTotalUSD;
                 window.updateTotals();
-                window.guardarLocal(); // Guarda inmediatamente después de agregar
+                window.guardarLocal(); 
 
                 try {
                     await addDoc(collection(db, "productos_comunidad"), {
@@ -299,9 +398,7 @@
                         fecha: new Date()
                     });
                     window.aprenderDeLaComunidad();
-                } catch (e) {
-                    console.error("Error guardando:", e);
-                }
+                } catch (e) {}
 
                 nameInput.value = '';
                 qtyInput.value = '1';
@@ -317,7 +414,7 @@
             totalUSD -= itemTotalUSD;
             if(totalUSD < 0) totalUSD = 0; 
             window.updateTotals();
-            window.guardarLocal(); // Guarda inmediatamente después de borrar
+            window.guardarLocal(); 
         }
 
         window.updateTotals = function() {
@@ -326,9 +423,10 @@
         }
 
         // AL INICIAR LA APP:
-        window.cargarLocal(); // 1. Recupera la lista guardada del teléfono
-        window.fetchRates();  // 2. Busca la tasa del dólar de hoy
-        window.aprenderDeLaComunidad(); // 3. Aprende las palabras nuevas
+        window.cargarLocal(); 
+        window.fetchRates();  
+        window.aprenderDeLaComunidad(); 
+        window.renderHistorial();
     </script>
 </body>
 </html>
