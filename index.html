@@ -27,8 +27,11 @@
         h1 { color: #333; text-align: center; font-size: 24px; margin-bottom: 5px; margin-top: 10px;}
         .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 15px; }
         
-        .rates-box { background: #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; justify-content: space-between; }
+        /* NUEVA CAJA DE TASAS CON INPUT */
+        .rates-box { background: #e9ecef; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; flex-direction: column; gap: 8px; }
+        .rate-row { display: flex; justify-content: space-between; align-items: center; }
         .rates-box span { font-weight: bold; color: #0056b3; }
+        .binance-input { width: 80px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; color: #d32f2f; text-align: right; }
 
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .input-full { flex: 1 1 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: white; }
@@ -48,9 +51,12 @@
         
         .delete-btn { background: #ff4d4d; color: white; border: none; border-radius: 6px; padding: 8px 10px; margin-left: 10px; cursor: pointer; font-size: 14px;}
 
-        .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; }
-        .total-box h3 { margin: 0; color: #2e7d32; font-size: 22px; }
-        .total-box h4 { margin: 5px 0 0 0; color: #555; font-size: 18px; }
+        /* NUEVO CUADRO DE RESULTADOS TRIPLE */
+        .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; border: 2px solid #c8e6c9;}
+        .total-box p { margin: 2px 0; font-size: 15px; color: #555; }
+        .total-box h4 { margin: 5px 0 10px 0; color: #333; font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        .total-box h3 { margin: 10px 0 5px 0; color: #d32f2f; font-size: 22px; }
+        .ahorro-text { font-size: 15px; font-weight: bold; margin-top: 5px !important; }
 
         .bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 400px; background: white; display: flex; justify-content: space-around; padding: 10px 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); border-top-left-radius: 15px; border-top-right-radius: 15px; }
         .nav-item { background: none; border: none; color: #666; font-size: 14px; font-weight: bold; cursor: pointer; padding: 8px; width: 33.3%; }
@@ -73,11 +79,19 @@
 <body>
     <div class="container">
         <h1>🛒 Mercado VE</h1>
-        <div class="subtitle">Tu app de compras inteligente</div>
+        <div class="subtitle">Inteligencia Financiera para tus Compras</div>
         
         <div class="rates-box">
-            <div>BCV: <span id="tasaBCV">Cargando...</span></div>
-            <div>Binance: <span id="tasaBinance">Cargando...</span></div>
+            <div class="rate-row">
+                <span>Tasa Oficial BCV:</span>
+                <span id="tasaBCV">Cargando...</span>
+            </div>
+            <div class="rate-row">
+                <span style="color: #d32f2f;">A cómo vendes USDT:</span>
+                <div>
+                    Bs. <input type="number" id="tasaBinanceInput" class="binance-input" placeholder="Ej. 41.50" step="0.01" oninput="window.updateTotals()">
+                </div>
+            </div>
         </div>
 
         <div id="tab-lista" class="tab-content active">
@@ -101,8 +115,13 @@
             <ul id="list"></ul>
             
             <div class="total-box">
-                <h3>Total: $<span id="totalUSD">0.00</span></h3>
-                <h4>Bs: <span id="totalVES">0.00</span></h4>
+                <p>Costo Real de los productos: <b>$<span id="totalUSD">0.00</span></b></p>
+                <h4>Pagar en Caja a BCV: <b>Bs <span id="totalVES">0.00</span></b></h4>
+                
+                <p style="font-size: 13px; color: #777;">Para pagar eso, necesitas vender:</p>
+                <h3><span id="totalUSDT">0.00</span> USDT</h3>
+                
+                <p id="ahorroText" class="ahorro-text"></p>
             </div>
 
             <div class="action-btns">
@@ -132,14 +151,10 @@
     </div>
 
     <script type="module">
-        // 1. IMPORTAR LIBRERÍAS DE GOOGLE
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        
-        // 2. IMPORTAR TU CATÁLOGO EXTERNO
         import { catalogoOficial, supermercadosFijos } from "./catalogo.js";
 
-        // TUS CLAVES DE FIREBASE
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -158,21 +173,18 @@
 
         window.inicializarCatalogos = function() {
             const selectProd = document.getElementById('itemCat');
-            // Usar la lista que viene del archivo externo
             catalogoOficial.sort().forEach(prod => {
                 const option = document.createElement('option');
                 option.value = prod;
                 option.text = prod;
                 selectProd.appendChild(option);
             });
-            
             const optionOtro = document.createElement('option');
             optionOtro.value = "OTRO";
             optionOtro.text = "✏️ Otro (Solo para mi lista personal)";
             optionOtro.style.fontWeight = "bold";
             selectProd.appendChild(optionOtro);
 
-            // Usar la lista de supermercados externa
             const catSup = document.getElementById('cat-supermercados');
             supermercadosFijos.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
         }
@@ -191,12 +203,16 @@
         window.guardarLocal = function() {
             localStorage.setItem('mercadoVE_lista', document.getElementById('list').innerHTML);
             localStorage.setItem('mercadoVE_total', totalUSD);
+            localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value);
         }
 
         window.cargarLocal = function() {
             if(localStorage.getItem('mercadoVE_lista')) {
                 document.getElementById('list').innerHTML = localStorage.getItem('mercadoVE_lista');
                 totalUSD = parseFloat(localStorage.getItem('mercadoVE_total'));
+            }
+            if(localStorage.getItem('mercadoVE_tasaBinance')) {
+                document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance');
             }
         }
 
@@ -259,32 +275,24 @@
         window.loadCommunity = async function() {
             const listEl = document.getElementById('precios-list');
             listEl.innerHTML = '<p style="text-align: center; color: #999;">Cargando precios...</p>';
-            
             try {
                 const q = query(collection(db, "productos_comunidad"));
                 const querySnapshot = await getDocs(q);
                 listEl.innerHTML = ''; 
-                
                 let todosLosDocs = [];
                 querySnapshot.forEach(doc => todosLosDocs.push(doc.data()));
-
                 todosLosDocs.sort((a, b) => {
                     if(!a.fecha || !b.fecha) return 0;
                     return a.fecha.seconds - b.fecha.seconds;
                 });
-                
                 let productosAgrupados = {};
-
                 todosLosDocs.forEach((data) => {
                     let nombreProd = data.producto; 
                     let nombreSuper = data.supermercado ? data.supermercado.trim() : "No especificado";
-
                     if(!productosAgrupados[nombreProd]) productosAgrupados[nombreProd] = {};
                     productosAgrupados[nombreProd][nombreSuper] = data.precioUSD;
                 });
-
                 const nombresProds = Object.keys(productosAgrupados).sort();
-
                 if(nombresProds.length === 0) {
                     listEl.innerHTML = '<p style="text-align: center; color: #999;">Aún no hay productos reportados.</p>';
                 } else {
@@ -292,16 +300,13 @@
                         const divGroup = document.createElement('div');
                         divGroup.className = 'prod-group';
                         let htmlContent = `<div class="prod-header">🛒 ${prod}</div><ul class="prod-store-list">`;
-                        
                         const tiendas = Object.keys(productosAgrupados[prod]).sort((a,b) => productosAgrupados[prod][a] - productosAgrupados[prod][b]);
-
                         tiendas.forEach((tienda, index) => {
                             const precio = productosAgrupados[prod][tienda];
                             const clasePrecio = (index === 0) ? 'precio-barato' : 'precio-normal';
                             const estrella = (index === 0 && tiendas.length > 1) ? '🏆' : '📍';
                             htmlContent += `<li class="prod-store-item"><span style="color:#666;">${estrella} ${tienda}</span><span class="${clasePrecio}">$${precio.toFixed(2)}</span></li>`;
                         });
-
                         htmlContent += `</ul>`;
                         divGroup.innerHTML = htmlContent;
                         listEl.appendChild(divGroup);
@@ -343,16 +348,21 @@
                 const binance = data.monitors.binance.price;
                 
                 document.getElementById('tasaBCV').textContent = `Bs ${bcv.toFixed(2)}`;
-                document.getElementById('tasaBinance').textContent = `Bs ${binance.toFixed(2)}`;
                 tasaActual = bcv;
                 localStorage.setItem('mercadoVE_tasaGuardada', tasaActual); 
+
+                // Intentar autocompletar Binance si está vacío
+                const inputBinance = document.getElementById('tasaBinanceInput');
+                if(!inputBinance.value) {
+                    inputBinance.value = binance.toFixed(2);
+                }
+
                 window.updateTotals();
             } catch (error) {
                 const tasaGuardada = localStorage.getItem('mercadoVE_tasaGuardada');
                 if (tasaGuardada) {
                     tasaActual = parseFloat(tasaGuardada);
                     document.getElementById('tasaBCV').textContent = `Bs ${tasaActual.toFixed(2)} (Guardada)`;
-                    document.getElementById('tasaBinance').textContent = "N/A";
                     window.updateTotals();
                 } else {
                     let tasaManual = prompt("Fallo de conexión. Por favor ingresa la tasa BCV manual:");
@@ -381,7 +391,7 @@
             const price = parseFloat(priceInput.value);
             const store = storeInput.value || "No especificado";
 
-            if(cat === "") return alert("Por favor, selecciona un producto oficial o elige 'Otro'.");
+            if(cat === "") return alert("Por favor, selecciona un producto.");
 
             let finalName = "";
             let enviarAComunidad = true;
@@ -396,11 +406,9 @@
 
             if(price > 0 && qty > 0) {
                 const itemTotalUSD = price * qty; 
-                
                 const list = document.getElementById('list');
                 const li = document.createElement('li');
                 li.className = "calc-item";
-                
                 li.innerHTML = `
                     <div style="display: flex; flex-direction: column;">
                         <span><b>${qty}x</b> ${finalName}</span>
@@ -412,27 +420,17 @@
                     </div>
                 `;
                 list.appendChild(li);
-
                 totalUSD += itemTotalUSD;
                 window.updateTotals();
                 window.guardarLocal(); 
 
                 if(enviarAComunidad) {
                     try {
-                        await addDoc(collection(db, "productos_comunidad"), {
-                            producto: finalName,
-                            precioUSD: price, 
-                            supermercado: store,
-                            fecha: new Date()
-                        });
+                        await addDoc(collection(db, "productos_comunidad"), { producto: finalName, precioUSD: price, supermercado: store, fecha: new Date() });
                     } catch (e) {}
                 }
 
-                catInput.value = "";
-                libreInput.value = "";
-                brandInput.value = "";
-                qtyInput.value = '1';
-                priceInput.value = '';
+                catInput.value = ""; libreInput.value = ""; brandInput.value = ""; qtyInput.value = '1'; priceInput.value = '';
                 window.verificarTipoProducto(); 
             } else {
                 alert("Por favor ingresa un precio válido.");
@@ -447,9 +445,41 @@
             window.guardarLocal(); 
         }
 
+        // === MAGIA MATEMÁTICA: LOS 3 TOTALES ===
         window.updateTotals = function() {
+            // 1. Costo Real USD
             document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
-            document.getElementById('totalVES').textContent = (totalUSD * tasaActual).toFixed(2);
+            
+            // 2. A pagar en Caja (BCV)
+            const totalVES = totalUSD * tasaActual;
+            document.getElementById('totalVES').textContent = totalVES.toFixed(2);
+
+            // 3. Venta USDT y Ahorro
+            const tasaBinance = parseFloat(document.getElementById('tasaBinanceInput').value);
+            const textoAhorro = document.getElementById('ahorroText');
+
+            if (tasaBinance > 0 && totalVES > 0) {
+                // Cuántos USDT debo vender para cubrir los Bolívares
+                const totalUSDT = totalVES / tasaBinance;
+                document.getElementById('totalUSDT').textContent = totalUSDT.toFixed(2);
+
+                // Calcular el Ahorro
+                const ahorro = totalUSD - totalUSDT;
+                
+                if (ahorro > 0) {
+                    textoAhorro.textContent = `💰 ¡Te estás ahorrando $${ahorro.toFixed(2)} al cambiar!`;
+                    textoAhorro.style.color = '#28a745'; // Verde
+                } else if (ahorro < 0) {
+                    textoAhorro.textContent = `⚠️ Estás perdiendo $${Math.abs(ahorro).toFixed(2)} al cambiar`;
+                    textoAhorro.style.color = '#d32f2f'; // Rojo
+                } else {
+                    textoAhorro.textContent = "Estás pagando exactamente lo mismo.";
+                    textoAhorro.style.color = '#555';
+                }
+            } else {
+                document.getElementById('totalUSDT').textContent = "0.00";
+                textoAhorro.textContent = "";
+            }
         }
 
         window.inicializarCatalogos();
