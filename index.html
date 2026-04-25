@@ -63,7 +63,12 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
+        /* NUEVOS ESTILOS PARA EL HISTORIAL ACORDEÓN */
         .historial-card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        .historial-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .historial-header:active { opacity: 0.7; }
+        .historial-details { display: none; margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px; }
+        .historial-snapshot { background: #f4f4f9; padding: 12px; border-radius: 6px; font-size: 14px; margin-top: 10px; }
 
         .prod-group { background: white; margin-bottom: 15px; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee; }
         .prod-header { background: #e9ecef; padding: 12px 15px; font-weight: bold; color: #333; font-size: 16px; text-transform: capitalize; border-bottom: 1px solid #ddd;}
@@ -143,6 +148,7 @@
 
         <div id="tab-historial" class="tab-content">
             <h3 style="color: #333; margin-top: 0;">Mis Listas Guardadas 📚</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">Toca cualquier lista para ver los detalles y las tasas de ese día.</p>
             <div id="historial-list"></div>
         </div>
     </div>
@@ -156,8 +162,6 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        
-        // AHORA IMPORTAMOS TAMBIÉN LAS MARCAS
         import { catalogoOficial, supermercadosFijos, marcasOficiales } from "./catalogo.js";
 
         const firebaseConfig = {
@@ -177,7 +181,6 @@
         let tasaActual = 0; 
 
         window.inicializarCatalogos = function() {
-            // Llenar Productos
             const selectProd = document.getElementById('itemCat');
             catalogoOficial.sort().forEach(prod => {
                 const option = document.createElement('option');
@@ -191,7 +194,6 @@
             optionOtro.style.fontWeight = "bold";
             selectProd.appendChild(optionOtro);
 
-            // Llenar Marcas (NUEVO)
             const selectBrand = document.getElementById('itemBrand');
             marcasOficiales.sort().forEach(marca => {
                 const option = document.createElement('option');
@@ -205,7 +207,6 @@
             optionOtraMarca.style.fontWeight = "bold";
             selectBrand.appendChild(optionOtraMarca);
 
-            // Llenar Supermercados
             const catSup = document.getElementById('cat-supermercados');
             supermercadosFijos.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
         }
@@ -253,17 +254,37 @@
             }
         }
 
+        // === AHORA GUARDAMOS EL SNAPSHOT COMPLETO (TODAS LAS TASAS Y TOTALES) ===
         window.guardarHistorial = function() {
             if(totalUSD === 0) return alert("No puedes guardar una lista vacía.");
             let nombreLista = prompt("Nombra esta lista (Ej: 'Compras Gama'):");
             if(nombreLista) {
                 let historial = JSON.parse(localStorage.getItem('mercadoVE_historial')) || [];
-                historial.push({ id: Date.now(), nombre: nombreLista, fecha: new Date().toLocaleDateString(), html: document.getElementById('list').innerHTML, total: totalUSD });
+                
+                const tasaBinance = parseFloat(document.getElementById('tasaBinanceInput').value) || 0;
+                const totalVES = totalUSD * tasaActual;
+                const totalUSDT = tasaBinance > 0 ? (totalVES / tasaBinance) : 0;
+                const ahorro = totalUSD - totalUSDT;
+
+                historial.push({ 
+                    id: Date.now(), 
+                    nombre: nombreLista, 
+                    fecha: new Date().toLocaleDateString(), 
+                    html: document.getElementById('list').innerHTML, 
+                    total: totalUSD,
+                    tasaBCV_guardada: tasaActual,
+                    tasaBinance_guardada: tasaBinance,
+                    totalVES_guardado: totalVES,
+                    totalUSDT_guardado: totalUSDT,
+                    ahorro_guardado: ahorro
+                });
+                
                 localStorage.setItem('mercadoVE_historial', JSON.stringify(historial));
                 window.vaciarLista(true); window.renderHistorial(); window.switchTab('historial'); 
             }
         }
 
+        // === MAGIA DEL ACORDEÓN PARA MOSTRAR EL HISTORIAL ===
         window.renderHistorial = function() {
             const histList = document.getElementById('historial-list');
             let historial = JSON.parse(localStorage.getItem('mercadoVE_historial')) || [];
@@ -272,23 +293,66 @@
                 return;
             }
             histList.innerHTML = '';
+            
             historial.slice().reverse().forEach(compra => {
                 const div = document.createElement('div');
                 div.className = 'historial-card';
+                
+                // Preparar el texto de ahorro si existe
+                let textoAhorroHTML = "";
+                if (compra.ahorro_guardado && compra.tasaBinance_guardada > 0) {
+                    if (compra.ahorro_guardado > 0) {
+                        textoAhorroHTML = `<p style="color:#28a745; font-weight:bold; margin-top: 8px;">💰 Ahorro: $${compra.ahorro_guardado.toFixed(2)}</p>`;
+                    } else if (compra.ahorro_guardado < 0) {
+                        textoAhorroHTML = `<p style="color:#d32f2f; font-weight:bold; margin-top: 8px;">⚠️ Pérdida: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`;
+                    }
+                }
+
+                // Generar la tarjeta con cabecera clickeable y detalles ocultos
                 div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; margin-bottom: 10px; border-bottom: 1px solid #ccc; padding-bottom: 5px;">
-                        <b style="color:#0056b3;">📝 ${compra.nombre}</b>
-                        <span style="font-size:12px; color:#666;">${compra.fecha}</span>
+                    <div class="historial-header" onclick="window.toggleHistorial(${compra.id})">
+                        <div>
+                            <b style="color:#0056b3; font-size: 16px;">📝 ${compra.nombre}</b>
+                            <div style="font-size:12px; color:#666; margin-top:4px;">${compra.fecha}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <b style="color:#28a745; font-size: 18px;">$${compra.total.toFixed(2)}</b>
+                            <div style="font-size: 12px; color: #888; margin-top: 2px;">👆 Toca para ver</div>
+                        </div>
                     </div>
-                    <ul style="margin-bottom:10px;">${compra.html}</ul>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 10px;">
-                        <b style="color:#28a745; font-size: 18px;">Total: $${compra.total.toFixed(2)}</b>
-                        <button onclick="window.borrarHistorial(${compra.id})" style="background:#ff4d4d; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">Borrar</button>
+                    
+                    <div id="detalles-${compra.id}" class="historial-details">
+                        <ul style="margin-bottom:10px;">${compra.html}</ul>
+                        
+                        <div class="historial-snapshot">
+                            <p style="margin: 0 0 5px 0;"><b>Tasas usadas ese día:</b></p>
+                            <p style="margin: 0; font-size: 13px; color: #555;">BCV: Bs ${compra.tasaBCV_guardada ? compra.tasaBCV_guardada.toFixed(2) : "N/A"} | Binance: Bs ${compra.tasaBinance_guardada ? compra.tasaBinance_guardada.toFixed(2) : "N/A"}</p>
+                            <hr style="border: 0; border-top: 1px solid #ddd; margin: 8px 0;">
+                            <p style="margin: 3px 0;">Costo Real: <b>$${compra.total.toFixed(2)}</b></p>
+                            <p style="margin: 3px 0;">Pago en Caja: <b>Bs ${compra.totalVES_guardado ? compra.totalVES_guardado.toFixed(2) : "0.00"}</b></p>
+                            <p style="margin: 3px 0;">USDT Vendido: <b>${compra.totalUSDT_guardado ? compra.totalUSDT_guardado.toFixed(2) : "0.00"} USDT</b></p>
+                            ${textoAhorroHTML}
+                        </div>
+
+                        <div style="text-align: right; margin-top: 15px;">
+                            <button onclick="window.borrarHistorial(${compra.id})" style="background:#ff4d4d; color:white; border:none; padding:8px 12px; border-radius:4px; cursor:pointer; font-weight:bold;">🗑️ Borrar Lista</button>
+                        </div>
                     </div>
                 `;
+                
                 div.querySelectorAll('.delete-btn').forEach(btn => btn.remove());
                 histList.appendChild(div);
             });
+        }
+
+        // Función para abrir/cerrar el acordeón
+        window.toggleHistorial = function(id) {
+            const detalles = document.getElementById(`detalles-${id}`);
+            if(detalles.style.display === "none" || detalles.style.display === "") {
+                detalles.style.display = "block";
+            } else {
+                detalles.style.display = "none";
+            }
         }
 
         window.borrarHistorial = function(id) {
@@ -404,7 +468,6 @@
         }
 
         window.addItem = async function() {
-            // Selectores
             const catInput = document.getElementById('itemCat');
             const libreInput = document.getElementById('itemNameLibre');
             const brandSelect = document.getElementById('itemBrand');
@@ -413,7 +476,6 @@
             const priceInput = document.getElementById('itemPrice');
             const storeInput = document.getElementById('storeName');
             
-            // Valores
             const cat = catInput.value;
             const libre = libreInput.value;
             const brandCat = brandSelect.value;
@@ -428,16 +490,14 @@
             let finalName = "";
             let enviarAComunidad = true;
 
-            // Determinar Marca Final
             let finalBrand = "";
             if(brandCat === "OTRA") {
                 if(brandLibre === "") return alert("Ingresa el nombre de la marca.");
                 finalBrand = brandLibre;
             } else if (brandCat !== "Sin Marca") {
                 finalBrand = brandCat;
-            } // Si es "Sin Marca", finalBrand se queda vacío ("")
+            } 
 
-            // Determinar Producto Final
             if(cat === "OTRO") {
                 if(libre === "") return alert("Ingresa el nombre de tu producto personal.");
                 finalName = finalBrand !== "" ? `${libre} (${finalBrand})` : libre;
@@ -472,15 +532,8 @@
                     } catch (e) {}
                 }
 
-                // Reset inputs
-                catInput.value = ""; 
-                libreInput.value = ""; 
-                brandSelect.value = ""; 
-                brandLibreInput.value = ""; 
-                qtyInput.value = '1'; 
-                priceInput.value = '';
-                window.verificarTipoProducto(); 
-                window.verificarMarca();
+                catInput.value = ""; libreInput.value = ""; brandSelect.value = ""; brandLibreInput.value = ""; qtyInput.value = '1'; priceInput.value = '';
+                window.verificarTipoProducto(); window.verificarMarca();
             } else {
                 alert("Por favor ingresa un precio válido.");
             }
