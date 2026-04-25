@@ -27,7 +27,6 @@
         h1 { color: #333; text-align: center; font-size: 24px; margin-bottom: 5px; margin-top: 10px;}
         .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 15px; }
         
-        /* NUEVA CAJA DE TASAS CON INPUT */
         .rates-box { background: #e9ecef; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: flex; flex-direction: column; gap: 8px; }
         .rate-row { display: flex; justify-content: space-between; align-items: center; }
         .rates-box span { font-weight: bold; color: #0056b3; }
@@ -35,7 +34,7 @@
 
         .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         .input-full { flex: 1 1 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: white; }
-        .input-brand { flex: 1 1 40%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .input-brand { flex: 1 1 40%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; background: white; }
         .input-qty { flex: 1 1 15%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; text-align: center; }
         .input-price { flex: 1 1 30%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
         
@@ -51,7 +50,6 @@
         
         .delete-btn { background: #ff4d4d; color: white; border: none; border-radius: 6px; padding: 8px 10px; margin-left: 10px; cursor: pointer; font-size: 14px;}
 
-        /* NUEVO CUADRO DE RESULTADOS TRIPLE */
         .total-box { margin-top: 20px; padding: 15px; background: #e2f0d9; border-radius: 8px; text-align: right; border: 2px solid #c8e6c9;}
         .total-box p { margin: 2px 0; font-size: 15px; color: #555; }
         .total-box h4 { margin: 5px 0 10px 0; color: #333; font-size: 18px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
@@ -101,12 +99,17 @@
                 <select id="itemCat" class="input-full" onchange="window.verificarTipoProducto()">
                     <option value="" disabled selected>📦 Selecciona un Producto...</option>
                 </select>
-
                 <input type="text" id="itemNameLibre" class="input-full" placeholder="Escribe tu producto personal..." style="display:none;">
-                <input type="text" id="itemBrand" class="input-brand" placeholder="Marca (Ej. PAN)">
+
+                <select id="itemBrand" class="input-brand" onchange="window.verificarMarca()">
+                    <option value="" disabled selected>🏷️ Marca...</option>
+                </select>
                 
                 <input type="number" id="itemQty" class="input-qty" placeholder="Cant" value="1" min="1">
                 <input type="number" id="itemPrice" class="input-price" placeholder="Precio $" step="0.01">
+                
+                <input type="text" id="itemBrandLibre" class="input-full" placeholder="Escribe la marca..." style="display:none;">
+
                 <input type="text" id="storeName" class="input-full" placeholder="📍 Supermercado (ej. Gama)" list="cat-supermercados">
                 
                 <button class="add-btn" onclick="window.addItem()">Agregar a la lista</button>
@@ -153,7 +156,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoOficial, supermercadosFijos } from "./catalogo.js";
+        
+        // AHORA IMPORTAMOS TAMBIÉN LAS MARCAS
+        import { catalogoOficial, supermercadosFijos, marcasOficiales } from "./catalogo.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -172,6 +177,7 @@
         let tasaActual = 0; 
 
         window.inicializarCatalogos = function() {
+            // Llenar Productos
             const selectProd = document.getElementById('itemCat');
             catalogoOficial.sort().forEach(prod => {
                 const option = document.createElement('option');
@@ -181,10 +187,25 @@
             });
             const optionOtro = document.createElement('option');
             optionOtro.value = "OTRO";
-            optionOtro.text = "✏️ Otro (Solo para mi lista personal)";
+            optionOtro.text = "✏️ Otro (Solo mi lista)";
             optionOtro.style.fontWeight = "bold";
             selectProd.appendChild(optionOtro);
 
+            // Llenar Marcas (NUEVO)
+            const selectBrand = document.getElementById('itemBrand');
+            marcasOficiales.sort().forEach(marca => {
+                const option = document.createElement('option');
+                option.value = marca;
+                option.text = marca;
+                selectBrand.appendChild(option);
+            });
+            const optionOtraMarca = document.createElement('option');
+            optionOtraMarca.value = "OTRA";
+            optionOtraMarca.text = "✏️ Otra...";
+            optionOtraMarca.style.fontWeight = "bold";
+            selectBrand.appendChild(optionOtraMarca);
+
+            // Llenar Supermercados
             const catSup = document.getElementById('cat-supermercados');
             supermercadosFijos.forEach(sup => catSup.innerHTML += `<option value="${sup}">`);
         }
@@ -193,10 +214,17 @@
             const cat = document.getElementById('itemCat').value;
             if(cat === "OTRO") {
                 document.getElementById('itemNameLibre').style.display = "block";
-                document.getElementById('itemBrand').style.display = "none";
             } else {
                 document.getElementById('itemNameLibre').style.display = "none";
-                document.getElementById('itemBrand').style.display = "block";
+            }
+        }
+
+        window.verificarMarca = function() {
+            const brand = document.getElementById('itemBrand').value;
+            if(brand === "OTRA") {
+                document.getElementById('itemBrandLibre').style.display = "block";
+            } else {
+                document.getElementById('itemBrandLibre').style.display = "none";
             }
         }
 
@@ -351,7 +379,6 @@
                 tasaActual = bcv;
                 localStorage.setItem('mercadoVE_tasaGuardada', tasaActual); 
 
-                // Intentar autocompletar Binance si está vacío
                 const inputBinance = document.getElementById('tasaBinanceInput');
                 if(!inputBinance.value) {
                     inputBinance.value = binance.toFixed(2);
@@ -377,31 +404,46 @@
         }
 
         window.addItem = async function() {
+            // Selectores
             const catInput = document.getElementById('itemCat');
             const libreInput = document.getElementById('itemNameLibre');
-            const brandInput = document.getElementById('itemBrand');
+            const brandSelect = document.getElementById('itemBrand');
+            const brandLibreInput = document.getElementById('itemBrandLibre');
             const qtyInput = document.getElementById('itemQty');
             const priceInput = document.getElementById('itemPrice');
             const storeInput = document.getElementById('storeName');
             
+            // Valores
             const cat = catInput.value;
             const libre = libreInput.value;
-            const brand = brandInput.value.trim();
+            const brandCat = brandSelect.value;
+            const brandLibre = brandLibreInput.value.trim();
             const qty = parseInt(qtyInput.value) || 1; 
             const price = parseFloat(priceInput.value);
             const store = storeInput.value || "No especificado";
 
             if(cat === "") return alert("Por favor, selecciona un producto.");
+            if(brandCat === "") return alert("Por favor, selecciona una marca o 'Sin Marca'.");
 
             let finalName = "";
             let enviarAComunidad = true;
 
+            // Determinar Marca Final
+            let finalBrand = "";
+            if(brandCat === "OTRA") {
+                if(brandLibre === "") return alert("Ingresa el nombre de la marca.");
+                finalBrand = brandLibre;
+            } else if (brandCat !== "Sin Marca") {
+                finalBrand = brandCat;
+            } // Si es "Sin Marca", finalBrand se queda vacío ("")
+
+            // Determinar Producto Final
             if(cat === "OTRO") {
                 if(libre === "") return alert("Ingresa el nombre de tu producto personal.");
-                finalName = libre;
+                finalName = finalBrand !== "" ? `${libre} (${finalBrand})` : libre;
                 enviarAComunidad = false; 
             } else {
-                finalName = brand !== "" ? `${cat} (${brand})` : cat;
+                finalName = finalBrand !== "" ? `${cat} (${finalBrand})` : cat;
             }
 
             if(price > 0 && qty > 0) {
@@ -430,8 +472,15 @@
                     } catch (e) {}
                 }
 
-                catInput.value = ""; libreInput.value = ""; brandInput.value = ""; qtyInput.value = '1'; priceInput.value = '';
+                // Reset inputs
+                catInput.value = ""; 
+                libreInput.value = ""; 
+                brandSelect.value = ""; 
+                brandLibreInput.value = ""; 
+                qtyInput.value = '1'; 
+                priceInput.value = '';
                 window.verificarTipoProducto(); 
+                window.verificarMarca();
             } else {
                 alert("Por favor ingresa un precio válido.");
             }
@@ -445,33 +494,24 @@
             window.guardarLocal(); 
         }
 
-        // === MAGIA MATEMÁTICA: LOS 3 TOTALES ===
         window.updateTotals = function() {
-            // 1. Costo Real USD
             document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
-            
-            // 2. A pagar en Caja (BCV)
             const totalVES = totalUSD * tasaActual;
             document.getElementById('totalVES').textContent = totalVES.toFixed(2);
-
-            // 3. Venta USDT y Ahorro
             const tasaBinance = parseFloat(document.getElementById('tasaBinanceInput').value);
             const textoAhorro = document.getElementById('ahorroText');
 
             if (tasaBinance > 0 && totalVES > 0) {
-                // Cuántos USDT debo vender para cubrir los Bolívares
                 const totalUSDT = totalVES / tasaBinance;
                 document.getElementById('totalUSDT').textContent = totalUSDT.toFixed(2);
-
-                // Calcular el Ahorro
                 const ahorro = totalUSD - totalUSDT;
                 
                 if (ahorro > 0) {
                     textoAhorro.textContent = `💰 ¡Te estás ahorrando $${ahorro.toFixed(2)} al cambiar!`;
-                    textoAhorro.style.color = '#28a745'; // Verde
+                    textoAhorro.style.color = '#28a745'; 
                 } else if (ahorro < 0) {
                     textoAhorro.textContent = `⚠️ Estás perdiendo $${Math.abs(ahorro).toFixed(2)} al cambiar`;
-                    textoAhorro.style.color = '#d32f2f'; // Rojo
+                    textoAhorro.style.color = '#d32f2f'; 
                 } else {
                     textoAhorro.textContent = "Estás pagando exactamente lo mismo.";
                     textoAhorro.style.color = '#555';
