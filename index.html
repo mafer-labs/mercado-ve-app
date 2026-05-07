@@ -73,7 +73,7 @@
                 <p class="total-box-row">Suma en USD: <b class="text-main">$<span id="totalUSD">0.00</span></b></p>
                 <h4 class="total-box-bcv">A pagar en caja: Bs <span id="totalVES">0.00</span></h4>
                 <p style="font-size: 13px; color: var(--text-muted);">Para pagar eso, debes vender:</p>
-                <h3 class="total-box-usdt"><span id="totalUSDT">0.00</span> <span style="font-size: 16px; color: var(--text-muted);">USDT</span></h3>
+                <h3 class="total-box-usdt"><span id="totalUSDT">0.00</span> <span style="font-size: 16px; color: var(--text-muted);">USD</span></h3>
                 <p id="ahorroText" class="ahorro-text"></p>
             </div>
 
@@ -133,6 +133,9 @@
         
         let currentUser = null;
         let historialNube = []; 
+        
+        // === NUEVO ESTADO PARA MODO PLANIFICACIÓN ===
+        let carrito = []; 
         let totalUSD = 0;
         let tasaActual = 0; 
 
@@ -170,16 +173,19 @@
         window.verificarMarca = function() { document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none"; }
 
         window.guardarLocal = function() {
-            localStorage.setItem('mercadoVE_lista', document.getElementById('list').innerHTML);
-            localStorage.setItem('mercadoVE_total', totalUSD);
+            localStorage.setItem('mercadoVE_carrito_v2', JSON.stringify(carrito));
             localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value);
             localStorage.setItem('mercadoVE_tasaGuardada', document.getElementById('tasaBCVInput').value);
         }
 
         window.cargarLocal = function() {
-            if(localStorage.getItem('mercadoVE_lista')) {
-                document.getElementById('list').innerHTML = localStorage.getItem('mercadoVE_lista');
-                totalUSD = parseFloat(localStorage.getItem('mercadoVE_total'));
+            // Limpiar la versión vieja si existe para que no choque
+            localStorage.removeItem('mercadoVE_lista');
+            localStorage.removeItem('mercadoVE_total');
+
+            if(localStorage.getItem('mercadoVE_carrito_v2')) {
+                carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2'));
+                window.renderCarrito();
             }
             if(localStorage.getItem('mercadoVE_tasaBinance')) document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance');
             if(localStorage.getItem('mercadoVE_tasaGuardada')) {
@@ -190,14 +196,162 @@
 
         window.vaciarLista = function(sinPreguntar = false) {
             if(sinPreguntar || confirm("¿Vaciar calculadora actual?")) {
-                document.getElementById('list').innerHTML = '';
-                totalUSD = 0; window.updateTotals(); window.guardarLocal();
+                carrito = [];
+                window.renderCarrito();
+                window.guardarLocal();
             }
         }
 
+        // === NUEVA LÓGICA DE DIBUJADO DE LISTA ===
+        window.renderCarrito = function() {
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            let tempTotal = 0;
+
+            carrito.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                tempTotal += itemTotal;
+
+                const li = document.createElement('li');
+                li.className = "calc-item";
+                
+                // Mostrar "Pendiente" si el precio es 0
+                const priceDisplay = item.price > 0 
+                    ? `<span class="item-price">$${itemTotal.toFixed(2)}</span>` 
+                    : `<span style="color:#d97706; font-size:13px; font-weight:bold;">Pendiente ⏳</span>`;
+
+                li.innerHTML = `
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="item-title">${item.qty}x ${item.name}</span>
+                        <span class="item-store text-muted">📍 ${item.store} ${!item.isCommunity ? '🔒' : ''}</span>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        ${priceDisplay}
+                        <button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;">✏️</button>
+                        <button class="btn-delete" onclick="window.deleteItem(${item.id})">✕</button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+
+            totalUSD = tempTotal;
+            window.updateTotals();
+        }
+
+        window.addItem = async function() {
+            const cat = document.getElementById('itemCat').value; const libre = document.getElementById('itemNameLibre').value;
+            const bCat = document.getElementById('itemBrand').value; const bLibre = document.getElementById('itemBrandLibre').value.trim();
+            const qty = parseInt(document.getElementById('itemQty').value)||1; 
+            
+            // AHORA PERMITE PRECIO CERO O VACÍO
+            const priceStr = document.getElementById('itemPrice').value;
+            const price = priceStr !== "" ? parseFloat(priceStr) : 0;
+            
+            const store = document.getElementById('storeName').value || "No especificado";
+
+            if(!cat) return alert("Selecciona un producto."); if(!bCat) return alert("Selecciona una marca.");
+            let fBrand = bCat === "OTRA" ? bLibre : (bCat !== "Sin Marca" ? bCat : "");
+            if(bCat === "OTRA" && !bLibre) return alert("Ingresa la marca.");
+            
+            let fName = cat === "OTRO" ? libre : cat;
+            if(cat === "OTRO" && !libre) return alert("Ingresa el producto.");
+            fName += fBrand ? ` (${fBrand})` : "";
+
+            if(qty > 0 && price >= 0) {
+                let isCommunity = (cat !== "OTRO");
+
+                carrito.push({
+                    id: Date.now(),
+                    name: fName,
+                    price: price,
+                    qty: qty,
+                    store: store,
+                    isCommunity: isCommunity
+                });
+
+                window.renderCarrito();
+                window.guardarLocal();
+
+                // SOLO ENVIAR A COMUNIDAD SI EL PRECIO ES MAYOR A 0
+                if(isCommunity && price > 0) {
+                    try {
+                        await addDoc(collection(db, "productos_comunidad"), { 
+                            producto: fName, precioUSD: price, supermercado: store, fecha: new Date(),
+                            reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
+                        });
+                    } catch(e) {}
+                }
+                
+                document.getElementById('itemCat').value=""; document.getElementById('itemNameLibre').value="";
+                document.getElementById('itemBrand').value=""; document.getElementById('itemBrandLibre').value="";
+                document.getElementById('itemQty').value='1'; document.getElementById('itemPrice').value='';
+                window.verificarTipoProducto(); window.verificarMarca();
+            } else {
+                alert("Cantidad inválida.");
+            }
+        }
+
+        // === NUEVO: FUNCIÓN PARA EDITAR PRECIOS EN EL PASILLO ===
+        window.editPrice = async function(id) {
+            let item = carrito.find(i => i.id === id);
+            if(!item) return;
+
+            let prevPrice = item.price > 0 ? item.price : '';
+            let newPriceStr = prompt(`Ingresa el nuevo precio unitario en $ para:\n${item.name}`, prevPrice);
+            
+            if(newPriceStr !== null) {
+                let newPrice = parseFloat(newPriceStr);
+                if(!isNaN(newPrice) && newPrice >= 0) {
+                    item.price = newPrice;
+                    window.renderCarrito();
+                    window.guardarLocal();
+
+                    // Si se acaba de asignar un precio real y es un producto público, mándalo a la DB
+                    if(item.isCommunity && newPrice > 0 && prevPrice === '') {
+                        try {
+                            await addDoc(collection(db, "productos_comunidad"), { 
+                                producto: item.name, precioUSD: newPrice, supermercado: item.store, fecha: new Date(),
+                                reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
+                            });
+                        } catch(e) {}
+                    }
+                } else {
+                    alert("Precio inválido.");
+                }
+            }
+        }
+
+        window.deleteItem = function(id) { 
+            carrito = carrito.filter(i => i.id !== id);
+            window.renderCarrito();
+            window.guardarLocal(); 
+        }
+
+        window.updateTotals = function() {
+            document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
+            const tVES = totalUSD * tasaActual; document.getElementById('totalVES').textContent = tVES.toFixed(2);
+            const tb = parseFloat(document.getElementById('tasaBinanceInput').value);
+            const txt = document.getElementById('ahorroText');
+
+            if(tb>0 && tVES>0) {
+                const tUSDT = tVES / tb; document.getElementById('totalUSDT').textContent = tUSDT.toFixed(2);
+                const a = totalUSD - tUSDT;
+                if(a>0) { txt.textContent = `💰 Ahorraste $${a.toFixed(2)}`; txt.className = "ahorro-text text-green"; }
+                else if(a<0) { txt.textContent = `⚠️ Pierdes $${Math.abs(a).toFixed(2)}`; txt.className = "ahorro-text text-red"; }
+                else { txt.textContent = "Sin diferencia cambiaria."; txt.className = "ahorro-text text-muted"; }
+            } else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; }
+        }
+
+        // ============================================
+
         window.guardarHistorialNube = async function() {
             if(!currentUser) return alert("Inicia sesión primero.");
-            if(totalUSD === 0) return alert("Lista vacía.");
+            if(carrito.length === 0) return alert("Lista vacía.");
+            
+            // Verificar si hay items sin precio
+            if(carrito.some(i => i.price === 0)) {
+                if(!confirm("Tienes productos con precio 'Pendiente'. ¿Seguro que quieres guardar la lista así?")) return;
+            }
             
             let nombreLista = prompt("Nombre para identificar esta compra:");
             if(nombreLista) {
@@ -257,11 +411,11 @@
                         <ul style="margin-bottom:15px;">${compra.html}</ul>
                         <div class="historial-snapshot">
                             <p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p>
-                            <p style="margin:2px 0; font-size:13px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2)} | Binance: Bs ${compra.tasaBinance_guardada?.toFixed(2)}</p>
+                            <p style="margin:2px 0; font-size:13px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2)} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2)}</p>
                             <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
                             <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${compra.total.toFixed(2)}</b></div>
                             <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2)}</b></div>
-                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USDT a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2)}</b></div>
+                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2)}</b></div>
                             ${ahorroH}
                         </div>
                         <div style="text-align: right; margin-top: 15px;">
@@ -269,7 +423,9 @@
                         </div>
                     </div>
                 `;
+                // Limpiar botones de edición y borrado del historial visual
                 div.querySelectorAll('.btn-delete').forEach(btn => btn.remove());
+                div.querySelectorAll('.btn-edit').forEach(btn => btn.remove());
                 hl.appendChild(div);
             });
         }
@@ -344,68 +500,6 @@
         window.updateRatesManual = function() {
             const v = parseFloat(document.getElementById('tasaBCVInput').value); if(v>0) tasaActual=v;
             window.updateTotals(); window.guardarLocal();
-        }
-
-        window.addItem = async function() {
-            const cat = document.getElementById('itemCat').value; const libre = document.getElementById('itemNameLibre').value;
-            const bCat = document.getElementById('itemBrand').value; const bLibre = document.getElementById('itemBrandLibre').value.trim();
-            const qty = parseInt(document.getElementById('itemQty').value)||1; const price = parseFloat(document.getElementById('itemPrice').value);
-            const store = document.getElementById('storeName').value || "No especificado";
-
-            if(!cat) return alert("Selecciona un producto."); if(!bCat) return alert("Selecciona una marca.");
-            let fBrand = bCat === "OTRA" ? bLibre : (bCat !== "Sin Marca" ? bCat : "");
-            if(bCat === "OTRA" && !bLibre) return alert("Ingresa la marca.");
-            
-            let fName = cat === "OTRO" ? libre : cat;
-            if(cat === "OTRO" && !libre) return alert("Ingresa el producto.");
-            fName += fBrand ? ` (${fBrand})` : "";
-
-            if(price>0 && qty>0) {
-                const tUSD = price * qty;
-                const li = document.createElement('li'); li.className = "calc-item";
-                li.innerHTML = `
-                    <div style="display:flex; flex-direction:column;">
-                        <span class="item-title">${qty}x ${fName}</span>
-                        <span class="item-store text-muted">📍 ${store} ${cat==='OTRO' ? '🔒' : ''}</span>
-                    </div>
-                    <div style="display:flex; align-items:center;">
-                        <span class="item-price">$${tUSD.toFixed(2)}</span>
-                        <button class="btn-delete" onclick="window.deleteItem(this, ${tUSD})">✕</button>
-                    </div>`;
-                document.getElementById('list').appendChild(li);
-                totalUSD += tUSD; window.updateTotals(); window.guardarLocal(); 
-
-                if(cat !== "OTRO") {
-                    try {
-                        await addDoc(collection(db, "productos_comunidad"), { 
-                            producto: fName, precioUSD: price, supermercado: store, fecha: new Date(),
-                            reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
-                        });
-                    } catch(e) {}
-                }
-                
-                document.getElementById('itemCat').value=""; document.getElementById('itemNameLibre').value="";
-                document.getElementById('itemBrand').value=""; document.getElementById('itemBrandLibre').value="";
-                document.getElementById('itemQty').value='1'; document.getElementById('itemPrice').value='';
-                window.verificarTipoProducto(); window.verificarMarca();
-            } else alert("Precio válido requerido.");
-        }
-
-        window.deleteItem = function(btn, amt) { btn.closest('li').remove(); totalUSD = Math.max(0, totalUSD-amt); window.updateTotals(); window.guardarLocal(); }
-
-        window.updateTotals = function() {
-            document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
-            const tVES = totalUSD * tasaActual; document.getElementById('totalVES').textContent = tVES.toFixed(2);
-            const tb = parseFloat(document.getElementById('tasaBinanceInput').value);
-            const txt = document.getElementById('ahorroText');
-
-            if(tb>0 && tVES>0) {
-                const tUSDT = tVES / tb; document.getElementById('totalUSDT').textContent = tUSDT.toFixed(2);
-                const a = totalUSD - tUSDT;
-                if(a>0) { txt.textContent = `💰 Ahorraste $${a.toFixed(2)}`; txt.className = "ahorro-text text-green"; }
-                else if(a<0) { txt.textContent = `⚠️ Pierdes $${Math.abs(a).toFixed(2)}`; txt.className = "ahorro-text text-red"; }
-                else { txt.textContent = "Sin diferencia cambiaria."; txt.className = "ahorro-text text-muted"; }
-            } else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; }
         }
 
         window.inicializarCatalogos(); window.cargarLocal(); window.fetchRates();
