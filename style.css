@@ -128,3 +128,12 @@ ul { list-style: none; padding: 0; margin: 0; }
 
 #login-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; text-align: center; }
 .login-btn { background: var(--bg-card); color: var(--text-main); padding: 14px 24px; border: 1px solid var(--border-color); border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow-md); margin-top: 30px;}
+
+/* === COMUNIDAD Y EXPLORAR (Cajas devueltas) === */
+.prod-group { background: var(--bg-card); margin-bottom: 12px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);}
+.prod-header { background: var(--bg-rates); padding: 10px 15px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--border-color);}
+.prod-store-list { list-style: none; padding: 0; margin: 0; }
+.prod-store-item { padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); font-size: 13px;}
+.prod-store-item:last-child { border-bottom: none; }
+.precio-barato { color: var(--primary-green); font-weight: 700; font-size: 15px;}
+.precio-normal { font-weight: 600;}
