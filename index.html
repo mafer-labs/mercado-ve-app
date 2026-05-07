@@ -5,13 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CuentaClara - Tu mercado al mejor cambio</title>
     <link rel="manifest" href="manifest.json">
-    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
+            <ul>
+                <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco. Aparecerán como "Pendientes". Cuando llegues al pasillo del supermercado, toca el lápiz ✏️ para poner el precio real.</li>
+                <li><strong>Multi-Listas:</strong> ¿Vas a dos supermercados? Crea una lista, dale a "Guardar Nube". Luego crea otra. Cuando llegues a cada mercado, ve a Historial y dale a <b>"Cargar a Calculadora"</b> para retomar esa compra.</li>
+                <li><strong>Comunidad:</strong> Cualquier producto con un precio válido ($0.01 en adelante) se sube a la guía de precios automáticamente con tu nombre para ayudar a otros.</li>
+            </ul>
+            <button onclick="document.getElementById('help-modal').style.display='none'" class="btn-main" style="margin-top:20px;">¡Entendido!</button>
+        </div>
+    </div>
+
     <div id="login-screen">
         <h1 style="font-size: 36px; color: var(--primary-green); margin-bottom: 10px; font-weight: 800;">CuentaClara</h1>
         <p style="color: var(--text-muted); font-size: 16px; max-width: 300px;">Tu mercado al mejor cambio.</p>
@@ -25,23 +36,24 @@
         <div class="header-top">
             <h1><span style="color: var(--primary-green);">Cuenta</span>Clara</h1>
             <div class="user-controls" id="user-controls">
-                <span id="user-name" class="user-name"></span>
-                <button onclick="window.logout()" class="btn-logout">Salir</button>
+                <button onclick="document.getElementById('help-modal').style.display='flex'" class="btn-icon">ℹ️ Ayuda</button>
+                <button onclick="window.logout()" class="btn-icon" style="color: var(--danger-red);">Salir</button>
             </div>
         </div>
-        <div class="subtitle">Tu mercado al mejor cambio.</div>
         
         <div class="rates-box">
             <div class="rate-row">
                 <span class="rate-label text-blue">🇻🇪 Tasa BCV ✏️</span>
-                <div>
-                    <span class="text-muted" style="font-size: 12px;">Bs.</span> <input type="number" id="tasaBCVInput" class="rate-input text-blue" placeholder="Ej. 36.50" step="0.01" oninput="window.updateRatesManual()">
+                <div class="rate-input-container">
+                    <span class="text-muted" style="font-size: 11px;">Bs.</span> 
+                    <input type="number" id="tasaBCVInput" class="rate-input text-blue" placeholder="36.50" step="0.01" oninput="window.updateRatesManual()">
                 </div>
             </div>
             <div class="rate-row">
-                <span class="rate-label text-green">🔄 Vendes USD a ✏️</span>
-                <div>
-                    <span class="text-muted" style="font-size: 12px;">Bs.</span> <input type="number" id="tasaBinanceInput" class="rate-input text-green" placeholder="Ej. 41.50" step="0.01" oninput="window.updateRatesManual()">
+                <span class="rate-label text-green">🔄 Venta USD ✏️</span>
+                <div class="rate-input-container">
+                    <span class="text-muted" style="font-size: 11px;">Bs.</span> 
+                    <input type="number" id="tasaBinanceInput" class="rate-input text-green" placeholder="41.50" step="0.01" oninput="window.updateRatesManual()">
                 </div>
             </div>
         </div>
@@ -50,9 +62,9 @@
             <div class="input-group">
                 <datalist id="cat-supermercados"></datalist>
                 <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()">
-                    <option value="" disabled selected>📦 Selecciona un Producto...</option>
+                    <option value="" disabled selected>📦 Producto...</option>
                 </select>
-                <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Escribe tu producto personal..." style="display:none;">
+                <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto personal..." style="display:none;">
 
                 <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()">
                     <option value="" disabled selected>🏷️ Marca...</option>
@@ -62,7 +74,7 @@
                 <input type="number" id="itemPrice" class="input-base input-price" placeholder="Precio $" step="0.01">
                 
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
-                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado (ej. Gama)" list="cat-supermercados">
+                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
                 
                 <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
             </div>
@@ -71,9 +83,9 @@
             
             <div class="total-box">
                 <p class="total-box-row">Suma en USD: <b class="text-main">$<span id="totalUSD">0.00</span></b></p>
-                <h4 class="total-box-bcv">A pagar en caja: Bs <span id="totalVES">0.00</span></h4>
-                <p style="font-size: 13px; color: var(--text-muted);">Para pagar eso, debes vender:</p>
-                <h3 class="total-box-usdt"><span id="totalUSDT">0.00</span> <span style="font-size: 16px; color: var(--text-muted);">USD</span></h3>
+                <h4 class="total-box-bcv">Pagar en caja: Bs <span id="totalVES">0.00</span></h4>
+                <p style="font-size: 12px; color: var(--text-muted);">Debes vender:</p>
+                <h3 class="total-box-usdt"><span id="totalUSDT">0.00</span> <span style="font-size: 14px; color: var(--text-muted);">USD</span></h3>
                 <p id="ahorroText" class="ahorro-text"></p>
             </div>
 
@@ -85,7 +97,7 @@
 
         <div id="tab-precios" class="tab-content">
             <h3 style="margin-top: 0; margin-bottom: 5px;">Guía de Precios</h3>
-            <p class="subtitle" style="margin-bottom: 20px;">Catálogo alimentado por la comunidad.</p>
+            <p class="text-muted" style="font-size: 13px; margin-bottom: 15px;">Catálogo de la comunidad.</p>
             <div id="precios-list">
                 <p style="text-align: center;" class="text-muted">Cargando precios...</p>
             </div>
@@ -93,7 +105,7 @@
 
         <div id="tab-historial" class="tab-content">
             <h3 style="margin-top: 0; margin-bottom: 5px;">Mi Historial</h3>
-            <p class="subtitle" style="margin-bottom: 20px;">Sincronizado con la nube ☁️</p>
+            <p class="text-muted" style="font-size: 13px; margin-bottom: 15px;">Sincronizado con la nube ☁️</p>
             <div id="historial-list"></div>
         </div>
     </div>
@@ -133,8 +145,6 @@
         
         let currentUser = null;
         let historialNube = []; 
-        
-        // === NUEVO ESTADO PARA MODO PLANIFICACIÓN ===
         let carrito = []; 
         let totalUSD = 0;
         let tasaActual = 0; 
@@ -144,7 +154,6 @@
                 currentUser = user;
                 document.getElementById('login-screen').style.display = 'none';
                 document.getElementById('user-controls').style.display = 'flex';
-                document.getElementById('user-name').textContent = `${user.displayName.split(' ')[0]}`;
                 window.cargarHistorialNube(); 
             } else {
                 currentUser = null;
@@ -179,10 +188,6 @@
         }
 
         window.cargarLocal = function() {
-            // Limpiar la versión vieja si existe para que no choque
-            localStorage.removeItem('mercadoVE_lista');
-            localStorage.removeItem('mercadoVE_total');
-
             if(localStorage.getItem('mercadoVE_carrito_v2')) {
                 carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2'));
                 window.renderCarrito();
@@ -202,7 +207,6 @@
             }
         }
 
-        // === NUEVA LÓGICA DE DIBUJADO DE LISTA ===
         window.renderCarrito = function() {
             const list = document.getElementById('list');
             list.innerHTML = '';
@@ -211,19 +215,16 @@
             carrito.forEach(item => {
                 const itemTotal = item.price * item.qty;
                 tempTotal += itemTotal;
-
                 const li = document.createElement('li');
                 li.className = "calc-item";
-                
-                // Mostrar "Pendiente" si el precio es 0
                 const priceDisplay = item.price > 0 
                     ? `<span class="item-price">$${itemTotal.toFixed(2)}</span>` 
-                    : `<span style="color:#d97706; font-size:13px; font-weight:bold;">Pendiente ⏳</span>`;
+                    : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`;
 
                 li.innerHTML = `
                     <div style="display:flex; flex-direction:column;">
                         <span class="item-title">${item.qty}x ${item.name}</span>
-                        <span class="item-store text-muted">📍 ${item.store} ${!item.isCommunity ? '🔒' : ''}</span>
+                        <span class="item-store text-muted">📍 ${item.store}</span>
                     </div>
                     <div style="display:flex; align-items:center;">
                         ${priceDisplay}
@@ -233,7 +234,6 @@
                 `;
                 list.appendChild(li);
             });
-
             totalUSD = tempTotal;
             window.updateTotals();
         }
@@ -242,11 +242,8 @@
             const cat = document.getElementById('itemCat').value; const libre = document.getElementById('itemNameLibre').value;
             const bCat = document.getElementById('itemBrand').value; const bLibre = document.getElementById('itemBrandLibre').value.trim();
             const qty = parseInt(document.getElementById('itemQty').value)||1; 
-            
-            // AHORA PERMITE PRECIO CERO O VACÍO
             const priceStr = document.getElementById('itemPrice').value;
             const price = priceStr !== "" ? parseFloat(priceStr) : 0;
-            
             const store = document.getElementById('storeName').value || "No especificado";
 
             if(!cat) return alert("Selecciona un producto."); if(!bCat) return alert("Selecciona una marca.");
@@ -259,25 +256,13 @@
 
             if(qty > 0 && price >= 0) {
                 let isCommunity = (cat !== "OTRO");
+                carrito.push({ id: Date.now(), name: fName, price: price, qty: qty, store: store, isCommunity: isCommunity });
+                window.renderCarrito(); window.guardarLocal();
 
-                carrito.push({
-                    id: Date.now(),
-                    name: fName,
-                    price: price,
-                    qty: qty,
-                    store: store,
-                    isCommunity: isCommunity
-                });
-
-                window.renderCarrito();
-                window.guardarLocal();
-
-                // SOLO ENVIAR A COMUNIDAD SI EL PRECIO ES MAYOR A 0
                 if(isCommunity && price > 0) {
                     try {
                         await addDoc(collection(db, "productos_comunidad"), { 
-                            producto: fName, precioUSD: price, supermercado: store, fecha: new Date(),
-                            reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
+                            producto: fName, precioUSD: price, supermercado: store, fecha: new Date(), reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
                         });
                     } catch(e) {}
                 }
@@ -286,16 +271,12 @@
                 document.getElementById('itemBrand').value=""; document.getElementById('itemBrandLibre').value="";
                 document.getElementById('itemQty').value='1'; document.getElementById('itemPrice').value='';
                 window.verificarTipoProducto(); window.verificarMarca();
-            } else {
-                alert("Cantidad inválida.");
-            }
+            } else alert("Cantidad inválida.");
         }
 
-        // === NUEVO: FUNCIÓN PARA EDITAR PRECIOS EN EL PASILLO ===
         window.editPrice = async function(id) {
             let item = carrito.find(i => i.id === id);
             if(!item) return;
-
             let prevPrice = item.price > 0 ? item.price : '';
             let newPriceStr = prompt(`Ingresa el nuevo precio unitario en $ para:\n${item.name}`, prevPrice);
             
@@ -303,29 +284,19 @@
                 let newPrice = parseFloat(newPriceStr);
                 if(!isNaN(newPrice) && newPrice >= 0) {
                     item.price = newPrice;
-                    window.renderCarrito();
-                    window.guardarLocal();
-
-                    // Si se acaba de asignar un precio real y es un producto público, mándalo a la DB
+                    window.renderCarrito(); window.guardarLocal();
                     if(item.isCommunity && newPrice > 0 && prevPrice === '') {
                         try {
                             await addDoc(collection(db, "productos_comunidad"), { 
-                                producto: item.name, precioUSD: newPrice, supermercado: item.store, fecha: new Date(),
-                                reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
+                                producto: item.name, precioUSD: newPrice, supermercado: item.store, fecha: new Date(), reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
                             });
                         } catch(e) {}
                     }
-                } else {
-                    alert("Precio inválido.");
-                }
+                } else alert("Precio inválido.");
             }
         }
 
-        window.deleteItem = function(id) { 
-            carrito = carrito.filter(i => i.id !== id);
-            window.renderCarrito();
-            window.guardarLocal(); 
-        }
+        window.deleteItem = function(id) { carrito = carrito.filter(i => i.id !== id); window.renderCarrito(); window.guardarLocal(); }
 
         window.updateTotals = function() {
             document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
@@ -342,16 +313,10 @@
             } else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; }
         }
 
-        // ============================================
-
+        // === AHORA SE GUARDA EL ARREGLO COMPLETO PARA PODER EDITARLO DESPUÉS ===
         window.guardarHistorialNube = async function() {
             if(!currentUser) return alert("Inicia sesión primero.");
             if(carrito.length === 0) return alert("Lista vacía.");
-            
-            // Verificar si hay items sin precio
-            if(carrito.some(i => i.price === 0)) {
-                if(!confirm("Tienes productos con precio 'Pendiente'. ¿Seguro que quieres guardar la lista así?")) return;
-            }
             
             let nombreLista = prompt("Nombre para identificar esta compra:");
             if(nombreLista) {
@@ -363,8 +328,9 @@
                 try {
                     await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), { 
                         nombre: nombreLista, fecha: new Date().toLocaleDateString(), timestamp: new Date(), 
-                        html: document.getElementById('list').innerHTML, total: totalUSD,
-                        tasaBCV_guardada: tasaActual, tasaBinance_guardada: tasaB,
+                        html: document.getElementById('list').innerHTML, // Info visual vieja (respaldo)
+                        items_array: carrito, // LA NUEVA MAGIA: El arreglo vivo
+                        total: totalUSD, tasaBCV_guardada: tasaActual, tasaBinance_guardada: tasaB,
                         totalVES_guardado: totVES, totalUSDT_guardado: totUSDT, ahorro_guardado: ahorro
                     });
                     window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); 
@@ -397,33 +363,36 @@
                     else if (compra.ahorro_guardado < 0) ahorroH = `<p class="text-red" style="font-weight:600; margin-top:8px;">⚠️ Pérdida: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`;
                 }
 
+                // SI EL HISTORIAL TIENE EL ARRAY VIVO, MOSTRAMOS EL BOTÓN "CARGAR A CALCULADORA"
+                let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : '';
+
                 div.innerHTML = `
                     <div class="historial-header" onclick="window.toggleHistorial('${compra.id}')">
                         <div>
-                            <b class="text-main" style="font-size: 16px;">📝 ${compra.nombre}</b>
-                            <div class="text-muted" style="font-size:12px; margin-top:4px;">${compra.fecha}</div>
+                            <b class="text-main" style="font-size: 15px;">📝 ${compra.nombre}</b>
+                            <div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div>
                         </div>
                         <div style="text-align: right;">
-                            <b class="text-green" style="font-size: 18px;">$${compra.total.toFixed(2)}</b>
+                            <b class="text-green" style="font-size: 16px;">$${compra.total.toFixed(2)}</b>
                         </div>
                     </div>
                     <div id="detalles-${compra.id}" class="historial-details">
                         <ul style="margin-bottom:15px;">${compra.html}</ul>
                         <div class="historial-snapshot">
                             <p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p>
-                            <p style="margin:2px 0; font-size:13px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2)} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2)}</p>
+                            <p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2)} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2)}</p>
                             <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
                             <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${compra.total.toFixed(2)}</b></div>
                             <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2)}</b></div>
                             <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2)}</b></div>
                             ${ahorroH}
                         </div>
-                        <div style="text-align: right; margin-top: 15px;">
+                        <div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">
+                            ${btnCargar}
                             <button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button>
                         </div>
                     </div>
                 `;
-                // Limpiar botones de edición y borrado del historial visual
                 div.querySelectorAll('.btn-delete').forEach(btn => btn.remove());
                 div.querySelectorAll('.btn-edit').forEach(btn => btn.remove());
                 hl.appendChild(div);
@@ -431,6 +400,21 @@
         }
 
         window.toggleHistorial = function(id) { const d = document.getElementById(`detalles-${id}`); d.style.display = (d.style.display === "none" || d.style.display === "") ? "block" : "none"; }
+        
+        // === NUEVA FUNCIÓN: CARGAR BORRADOR A LA CALCULADORA ===
+        window.cargarA_Calculadora = function(id) {
+            if (carrito.length > 0) {
+                if (!confirm("Tienes productos en la calculadora actual. ¿Deseas reemplazar tu calculadora con esta lista guardada?")) return;
+            }
+            let compra = historialNube.find(c => c.id === id);
+            if (compra && compra.items_array) {
+                carrito = compra.items_array;
+                if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual; }
+                if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada; }
+                window.renderCarrito(); window.guardarLocal(); window.switchTab('lista');
+            }
+        }
+
         window.borrarHistorialNube = async function(id) {
             if(!currentUser) return;
             if(confirm("¿Eliminar para siempre?")) {
