@@ -9,15 +9,25 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <style>
-        /* Estilos específicos para la nueva caja de Cantidad+Unidad y Pull-to-Refresh */
+<style>
+        /* Bloqueamos el movimiento horizontal para siempre */
+        body { overflow-x: hidden; } 
+        
+        /* Cajas de cantidad */
         .qty-unit-box { display: flex; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); flex: 1 1 45%; }
         .qty-input { width: 50%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
         .qty-input:focus { outline: none; }
         .unit-select { width: 50%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
         .unit-select:focus { outline: none; }
         
-        #ptr { text-align: center; padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; background: var(--bg-body);}
+        /* EL FIX: Pull to refresh flotante y elegante */
+        #ptr { 
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; 
+            background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            padding: 15px; font-size: 13px; color: var(--text-muted); 
+            display: none; align-items: center; justify-content: center; gap: 8px; 
+            font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+        }
     </style>
 </head>
 <body>
