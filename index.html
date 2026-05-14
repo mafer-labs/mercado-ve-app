@@ -5,27 +5,86 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CuentaClara</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { overflow-x: hidden; } 
+        #login-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: #fff; position: fixed; width: 100%; z-index: 9999; }
+        .premium-btn { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; cursor: pointer; }
+        .admin-card { background: #f3f4f6; border: 1px solid #ddd; padding: 12px; border-radius: 10px; margin-bottom: 10px; font-size: 13px; color: #000; }
+    </style>
 </head>
 <body>
-    <div id="login-screen" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center;">
-        <h1 style="color:#22c55e; font-size:32px;">CuentaClara</h1>
-        <p id="status-msg" style="font-size:12px; color:#666; margin-bottom:20px;">Presiona el botón para entrar</p>
-        <button id="login-btn" onclick="window.loginConGoogle()" style="padding:15px 30px; background:#fff; border:2px solid #22c55e; border-radius:12px; font-weight:bold; cursor:pointer;">
-             🔑 Iniciar Sesión con Google
+    <div id="toast" style="display:none; position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#22c55e; color:white; padding:10px 20px; border-radius:20px; z-index:10000;"></div>
+
+    <div id="login-screen">
+        <h1 style="color: #22c55e; font-size: 36px; font-weight: 800; margin-bottom: 10px;">CuentaClara</h1>
+        <p style="color: #666; margin-bottom: 20px;">Tu mercado al mejor cambio</p>
+        <button onclick="window.loginConGoogle()" style="padding: 15px 30px; background: white; border: 2px solid #22c55e; border-radius: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+            Continuar con Google
         </button>
     </div>
 
-    <div id="main-app" style="display:none; padding:20px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h2>Hola! 👋</h2>
-            <button onclick="window.logout()" style="color:red; background:none; border:none; font-weight:bold;">Salir</button>
+    <div id="app-container" style="display:none;">
+        <div class="container">
+            <header style="display:flex; justify-content:space-between; align-items:center; padding: 15px 0;">
+                <h1 onclick="window.handleAdminClick()" style="font-size:24px; cursor:pointer;"><span style="color:#22c55e;">Cuenta</span>Clara</h1>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button id="btn-go-premium" onclick="document.getElementById('premium-modal').style.display='flex'" class="premium-btn" style="display:none;">👑 Premium</button>
+                    <button onclick="window.logout()" style="color:#ef4444; background:none; border:none; font-weight:600;">Salir</button>
+                </div>
+            </header>
+
+            <div class="rates-box" style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
+                <input type="text" id="tasaBCVInput" placeholder="BCV Bs." oninput="window.updateRatesManual()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <input type="text" id="tasaBinanceInput" placeholder="Venta Bs." oninput="window.updateRatesManual()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+            </div>
+
+            <div id="tab-lista">
+                <div class="input-group" style="display:flex; flex-direction:column; gap:10px;">
+                    <input type="text" id="itemName" placeholder="Producto o Marca..." style="padding:12px; border:1px solid #ddd; border-radius:8px;">
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="itemQty" value="1" style="width:70px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                        <input type="text" id="itemPrice" placeholder="Precio $" style="flex:1; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                    </div>
+                    <button class="btn-main" onclick="window.addItem()" style="background:#22c55e; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold;">Agregar a la lista</button>
+                </div>
+
+                <ul id="list" style="margin-top:20px; list-style:none; padding:0;"></ul>
+
+                <div style="margin-top:20px; padding:20px; background:#f0fdf4; border-radius:15px; text-align:center;">
+                    <p style="margin:0;">Total USD: <b>$<span id="totalUSD">0.00</span></b></p>
+                    <h2 style="margin:5px 0; color:#166534;">Total Bs: <span id="totalVES">0.00</span></h2>
+                </div>
+            </div>
         </div>
-        <p>Ya puedes usar tu calculadora.</p>
+    </div>
+
+    <div id="premium-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:20000; align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:white; padding:25px; border-radius:20px; width:90%; max-width:400px;">
+            <h3 style="color:#f59e0b;">👑 CuentaClara Premium</h3>
+            <p style="font-size:14px;">Activa multi-listas y sincronización por <b>$1.50 al mes</b>.</p>
+            <div style="background:#f9fafb; padding:10px; border-radius:10px; font-size:12px; margin:15px 0;">
+                <b>Pago Móvil:</b> 0424-2858035 • Banesco • 25.443.679
+            </div>
+            <input type="text" id="pay-ref" placeholder="Referencia de pago" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+            <button onclick="window.reportarPago()" style="width:100%; background:#f59e0b; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold;">Reportar Pago</button>
+            <button onclick="document.getElementById('premium-modal').style.display='none'" style="width:100%; background:none; border:none; margin-top:10px; color:#666;">Cerrar</button>
         </div>
+    </div>
+
+    <div id="admin-modal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:30000; align-items:center; justify-content:center;">
+        <div class="modal-content" style="background:white; padding:20px; border-radius:20px; width:90%; max-height:80vh; overflow-y:auto;">
+            <h3>Panel Admin 🛠️</h3>
+            <div id="admin-list"></div>
+            <button onclick="document.getElementById('admin-modal').style.display='none'" class="btn-main" style="margin-top:15px;">Cerrar</button>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, query, doc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -38,35 +97,113 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // Función de inicio
-        window.loginConGoogle = () => {
-            document.getElementById('status-msg').innerText = "Conectando con Google...";
-            signInWithRedirect(auth, provider);
-        };
+        let currentUser = null;
+        let userPlan = "gratis";
+        let carrito = [];
+        let tasaActual = 0;
+        let adminClicks = 0;
 
+        // AUTH
+        window.loginConGoogle = () => signInWithRedirect(auth, provider);
         window.logout = () => signOut(auth).then(() => location.reload());
 
-        // Escuchar cuando el usuario vuelve de Google
-        getRedirectResult(auth).then((result) => {
-            if (result) {
-                console.log("Logueado con éxito");
-            }
-        }).catch((error) => {
-            alert("Error de Google: " + error.code);
-        });
+        getRedirectResult(auth).catch(e => console.error("Error:", e));
 
-        // Vigilar si el usuario ya entró
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
             if (user) {
+                currentUser = user;
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('main-app').style.display = 'block';
+                document.getElementById('app-container').style.display = 'block';
+                
+                const userRef = doc(db, "usuarios", user.uid);
+                const userSnap = await getDoc(userRef);
+                if (userSnap.exists()) {
+                    userPlan = userSnap.data().plan || "gratis";
+                } else {
+                    await setDoc(userRef, { email: user.email, plan: "gratis" });
+                }
+                document.getElementById('btn-go-premium').style.display = (userPlan === "gratis") ? 'flex' : 'none';
             } else {
                 document.getElementById('login-screen').style.display = 'flex';
-                document.getElementById('main-app').style.display = 'none';
+                document.getElementById('app-container').style.display = 'none';
             }
         });
+
+        // ADMIN
+        window.handleAdminClick = () => {
+            if (currentUser && currentUser.email === 'mariac.assistant@gmail.com') {
+                adminClicks++;
+                if (adminClicks >= 5) {
+                    adminClicks = 0;
+                    document.getElementById('admin-modal').style.display = 'flex';
+                    window.loadAdminPayments();
+                }
+            }
+        };
+
+        window.loadAdminPayments = async () => {
+            const listEl = document.getElementById('admin-list');
+            const q = query(collection(db, "pagos_pendientes"), where("estado", "==", "pendiente"));
+            const snap = await getDocs(q);
+            listEl.innerHTML = snap.empty ? 'No hay pagos pendientes.' : '';
+            snap.forEach(d => {
+                const p = d.data();
+                listEl.innerHTML += `<div class="admin-card"><b>${p.email}</b><br>Ref: ${p.referencia}<br><button onclick="window.approvePayment('${d.id}','${p.uid}')" style="background:#22c55e; color:white; border:none; padding:5px; width:100%; margin-top:5px; border-radius:5px;">Aprobar</button></div>`;
+            });
+        };
+
+        window.approvePayment = async (payId, uId) => {
+            await updateDoc(doc(db, "usuarios", uId), { plan: "premium" });
+            await updateDoc(doc(db, "pagos_pendientes", payId), { estado: "completado" });
+            alert("¡Usuario activado!"); window.loadAdminPayments();
+        };
+
+        // CALCULADORA
+        window.updateRatesManual = () => {
+            tasaActual = parseFloat(document.getElementById('tasaBCVInput').value.replace(',','.')) || 0;
+            window.render();
+        };
+
+        window.addItem = () => {
+            const name = document.getElementById('itemName').value;
+            const price = parseFloat(document.getElementById('itemPrice').value.replace(',','.')) || 0;
+            const qty = parseFloat(document.getElementById('itemQty').value) || 1;
+            if(price > 0) {
+                carrito.push({ name, price, qty });
+                window.render();
+                document.getElementById('itemName').value = '';
+                document.getElementById('itemPrice').value = '';
+            }
+        };
+
+        window.render = () => {
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            let total = 0;
+            carrito.forEach((i, idx) => {
+                const sub = i.price * i.qty;
+                total += sub;
+                list.innerHTML += `<li style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                    <span>${i.qty}x ${i.name || 'Producto'}</span>
+                    <b>$${sub.toFixed(2)}</b>
+                </li>`;
+            });
+            document.getElementById('totalUSD').innerText = total.toFixed(2);
+            document.getElementById('totalVES').innerText = (total * tasaActual).toFixed(2);
+        };
+
+        window.reportarPago = async () => {
+            const ref = document.getElementById('pay-ref').value;
+            if(!ref) return;
+            await addDoc(collection(db, "pagos_pendientes"), { uid: currentUser.uid, email: currentUser.email, referencia: ref, estado: "pendiente" });
+            alert("Reporte enviado con éxito.");
+            document.getElementById('premium-modal').style.display = 'none';
+        };
+
+        window.vaciar = () => { carrito = []; window.render(); };
     </script>
 </body>
 </html>
