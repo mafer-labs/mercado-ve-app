@@ -1,6 +1,6 @@
 {
-  "name": "Calculadora Mercado VE",
-  "short_name": "Mercado VE",
+  "name": "CuentaClara",
+  "short_name": "CuentaClara",
   "description": "Tu lista de compras inteligente en USD y VES",
   "start_url": "./index.html",
   "display": "standalone",
