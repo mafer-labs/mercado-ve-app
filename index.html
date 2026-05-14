@@ -5,49 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CuentaClara</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
-        <h1 style="color: #22c55e; font-size: 32px; font-weight: 800;">CuentaClara</h1>
-        <button onclick="window.loginConGoogle()" style="padding: 12px 24px; background: white; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600;">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
-            Entrar con Google
+    <div id="login-screen" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; text-align:center;">
+        <h1 style="color:#22c55e; font-size:32px;">CuentaClara</h1>
+        <p id="status-msg" style="font-size:12px; color:#666; margin-bottom:20px;">Presiona el botón para entrar</p>
+        <button id="login-btn" onclick="window.loginConGoogle()" style="padding:15px 30px; background:#fff; border:2px solid #22c55e; border-radius:12px; font-weight:bold; cursor:pointer;">
+             🔑 Iniciar Sesión con Google
         </button>
     </div>
 
-    <div id="main-content" style="display: none;">
-        <div class="container">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-                <h1 style="font-size: 20px;">CuentaClara</h1>
-                <button onclick="window.logout()" style="color: #ef4444; background: none; border: none; font-weight: 600;">Cerrar sesión</button>
-            </div>
-
-            <div class="rates-box">
-                <input type="number" id="tasaBCVInput" placeholder="Tasa BCV" oninput="window.calcular()">
-                <input type="number" id="tasaBinanceInput" placeholder="Tasa USD" oninput="window.calcular()">
-            </div>
-
-            <div class="input-group">
-                <input type="text" id="itemName" placeholder="Producto...">
-                <input type="number" id="itemPrice" placeholder="Precio $">
-                <button class="btn-main" onclick="window.addItem()">Agregar</button>
-            </div>
-
-            <ul id="list" style="margin-top: 20px;"></ul>
-
-            <div class="total-box" style="margin-top: 20px; padding: 15px; background: #f0fdf4; border-radius: 12px;">
-                <p>Total USD: <b>$<span id="totalUSD">0.00</span></b></p>
-                <h2 style="color: #166534;">Total Bs: <span id="totalVES">0.00</span></h2>
-            </div>
-            
-            <button class="btn-secondary" onclick="window.vaciar()" style="width: 100%; margin-top: 10px;">Vaciar Lista</button>
+    <div id="main-app" style="display:none; padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Hola! 👋</h2>
+            <button onclick="window.logout()" style="color:red; background:none; border:none; font-weight:bold;">Salir</button>
         </div>
-    </div>
+        <p>Ya puedes usar tu calculadora.</p>
+        </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -62,50 +40,33 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        let carrito = [];
-
-        // Auth
+        // Función de inicio
         window.loginConGoogle = () => {
-            signInWithPopup(auth, provider).catch(err => alert("Error: " + err.message));
+            document.getElementById('status-msg').innerText = "Conectando con Google...";
+            signInWithRedirect(auth, provider);
         };
 
-        window.logout = () => signOut(auth);
+        window.logout = () => signOut(auth).then(() => location.reload());
 
-        onAuthStateChanged(auth, (user) => {
-            document.getElementById('login-screen').style.display = user ? 'none' : 'flex';
-            document.getElementById('main-content').style.display = user ? 'block' : 'none';
+        // Escuchar cuando el usuario vuelve de Google
+        getRedirectResult(auth).then((result) => {
+            if (result) {
+                console.log("Logueado con éxito");
+            }
+        }).catch((error) => {
+            alert("Error de Google: " + error.code);
         });
 
-        // Lógica simple
-        window.addItem = () => {
-            const name = document.getElementById('itemName').value;
-            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
-            if(price > 0) {
-                carrito.push({ name, price });
-                window.render();
-                document.getElementById('itemName').value = '';
-                document.getElementById('itemPrice').value = '';
+        // Vigilar si el usuario ya entró
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+            } else {
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('main-app').style.display = 'none';
             }
-        };
-
-        window.render = () => {
-            const list = document.getElementById('list');
-            list.innerHTML = '';
-            let total = 0;
-            carrito.forEach((item, index) => {
-                total += item.price;
-                list.innerHTML += `<li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
-                    <span>${item.name || 'Producto'}</span>
-                    <b>$${item.price.toFixed(2)}</b>
-                </li>`;
-            });
-            const tasa = parseFloat(document.getElementById('tasaBCVInput').value) || 0;
-            document.getElementById('totalUSD').innerText = total.toFixed(2);
-            document.getElementById('totalVES').innerText = (total * tasa).toFixed(2);
-        };
-
-        window.calcular = () => window.render();
-        window.vaciar = () => { carrito = []; window.render(); };
+        });
     </script>
 </body>
 </html>
