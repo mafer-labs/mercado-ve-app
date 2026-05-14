@@ -36,14 +36,14 @@
             <div style="text-align: center;">
                 <span style="font-size: 40px;">👑</span>
                 <h3 style="color: #f59e0b; font-size: 22px; margin-top: 5px;">Sube a Premium</h3>
-                <p class="text-muted" style="font-size: 13px;">Apoya el proyecto y desbloquea beneficios exclusivos.</p>
+                <p class="text-muted" style="font-size: 13px;">Desbloquea todo el poder de CuentaClara.</p>
             </div>
             <ul style="font-size: 13px; margin: 15px 0; padding-left: 20px; color: var(--text-main);">
                 <li>✅ <b>Multi-Listas Nube:</b> Guarda listas ilimitadas.</li>
                 <li>✅ <b>Sincronización Comunitaria:</b> Agrega con 1 toque.</li>
             </ul>
             <div class="paywall-box">
-                <h4 style="margin:0 0 10px 0; font-size: 14px;">1️⃣ Realiza tu pago:</h4>
+                <h4 style="margin:0 0 10px 0; font-size: 14px;">1️⃣ Realiza tu pago ($1.50):</h4>
                 <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
                     <span class="text-muted">Pago Móvil:</span>
                     <b>0424-2858035 • Banesco • 25.443.679</b>
@@ -66,7 +66,7 @@
         <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="color: var(--primary-green); border-bottom: 2px solid var(--primary-green); padding-bottom: 10px;">Panel Admin 🛠️</h3>
             <div id="admin-list" style="margin-top: 20px;"><p class="text-muted">Buscando reportes...</p></div>
-            <button onclick="document.getElementById('admin-modal').style.display='none'" class="btn-main" style="margin-top:20px;">Cerrar Panel</button>
+            <button onclick="document.getElementById('admin-modal').style.display='none'" class="btn-main" style="margin-top:20px;">Cerrar</button>
         </div>
     </div>
 
@@ -81,7 +81,7 @@
     <div class="container">
         <div class="header-top">
             <h1 id="app-logo" onclick="window.handleAdminClick()" style="cursor: pointer;"><span style="color: var(--primary-green);">Cuenta</span>Clara</h1>
-            <div class="user-controls" id="user-controls">
+            <div class="user-controls" id="user-controls" style="display:none;">
                 <button id="btn-go-premium" onclick="window.showPremiumModal()" class="premium-btn" style="display:none;">👑 Premium</button>
                 <button onclick="window.logout()" class="btn-icon" style="color: var(--danger-red);">Salir</button>
             </div>
@@ -101,8 +101,8 @@
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
                 <datalist id="cat-supermercados"></datalist>
-                <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()"></select>
-                <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled></select>
+                <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()"><option value="" disabled selected>🏪 Pasillo...</option></select>
+                <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled><option value="" disabled selected>📦 Producto...</option></select>
                 <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto..." style="display:none;">
                 <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()"></select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Marca..." style="display:none;">
@@ -110,18 +110,19 @@
                     <div class="qty-unit-box">
                         <input type="text" id="itemQty" class="qty-input" value="1">
                         <select id="itemUnit" class="unit-select">
-                            <option value="und">und</option><option value="kg">kg</option>
+                            <option value="und">und</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="cartón">cartón</option>
                         </select>
                     </div>
                     <input type="text" id="itemPrice" class="input-base" placeholder="Precio $" style="flex: 1;">
                 </div>
-                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Supermercado" list="cat-supermercados">
-                <button class="btn-main" onclick="window.addItem()">Agregar</button>
+                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
+                <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
             </div>
             <ul id="list"></ul>
             <div class="total-box">
                 <p>USD: <b>$<span id="totalUSD">0.00</span></b></p>
                 <h4>Total Bs: <span id="totalVES">0.00</span></h4>
+                <p id="ahorroText" class="ahorro-text"></p>
             </div>
             <div class="action-btns">
                 <button class="btn-secondary blue" onclick="window.guardarHistorialNube()">☁️ Guardar</button>
@@ -129,12 +130,15 @@
             </div>
         </div>
 
-        <div id="tab-precios" class="tab-content"><div id="precios-list"></div></div>
+        <div id="tab-precios" class="tab-content">
+            <input type="text" id="searchCommunity" class="input-base input-full" placeholder="🔍 Buscar..." oninput="window.filterCommunity()">
+            <div id="precios-list"></div>
+        </div>
         <div id="tab-historial" class="tab-content"><div id="historial-list"></div></div>
     </div>
 
     <div class="bottom-nav">
-        <button class="nav-item active" id="btn-lista" onclick="window.switchTab('lista')">📝 Calculadora</button>
+        <button class="nav-item active" id="btn-lista" onclick="window.switchTab('lista')">📝 Lista</button>
         <button class="nav-item" id="btn-precios" onclick="window.switchTab('precios')">🔍 Explorar</button>
         <button class="nav-item" id="btn-historial" onclick="window.switchTab('historial')">📚 Historial</button>
     </div>
@@ -143,7 +147,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=8";
+        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=9";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -155,40 +159,44 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
         const auth = getAuth(app);
+        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        // LOGICA DE REDIRECT PARA MOVILES
+        let currentUser = null; let userPlan = "gratis"; let carrito = []; let totalUSD = 0; let tasaActual = 0;
+        let historialNube = []; let adminClicks = 0; let listaActualId = null;
+
+        const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
+        const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
+        const escapeHTML = (str) => { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; };
+
+        // LOGIN REDIRECT
         window.loginConGoogle = async () => {
-            try {
-                await setPersistence(auth, browserLocalPersistence);
-                await signInWithRedirect(auth, provider);
-            } catch (e) { alert("Error al iniciar: " + e.message); }
+            await setPersistence(auth, browserLocalPersistence);
+            signInWithRedirect(auth, provider);
         };
 
         getRedirectResult(auth).catch(e => console.error("Error redirect:", e));
 
         onAuthStateChanged(auth, async (user) => {
+            const loginScr = document.getElementById('login-screen');
+            const userCtr = document.getElementById('user-controls');
             if (user) {
                 currentUser = user;
-                document.getElementById('login-screen').style.display = 'none';
+                loginScr.style.display = 'none';
+                userCtr.style.display = 'flex';
                 const userSnap = await getDoc(doc(db, "usuarios", user.uid));
                 if (userSnap.exists()) { userPlan = userSnap.data().plan || "gratis"; }
                 else { await setDoc(doc(db, "usuarios", user.uid), { email: user.email, plan: "gratis", fecha: new Date() }); }
                 document.getElementById('btn-go-premium').style.display = (userPlan === "gratis") ? 'flex' : 'none';
                 window.cargarHistorialNube();
             } else {
-                document.getElementById('login-screen').style.display = 'flex';
+                loginScr.style.display = 'flex';
+                userCtr.style.display = 'none';
             }
         });
 
-        // --- FUNCIONES GLOBALIZADAS ---
-        let currentUser = null; let userPlan = "gratis"; let carrito = []; let totalUSD = 0; let tasaActual = 0;
-        let historialNube = []; let adminClicks = 0;
-
-        window.logout = () => signOut(auth).then(() => location.reload());
-        
+        // ADMIN LOGIC
         window.handleAdminClick = () => {
             if (currentUser && currentUser.email === 'mariac.assistant@gmail.com') {
                 adminClicks++; if (adminClicks >= 5) { adminClicks = 0; document.getElementById('admin-modal').style.display = 'flex'; window.loadAdminPayments(); }
@@ -202,7 +210,7 @@
             listEl.innerHTML = snap.empty ? 'Sin pagos.' : '';
             snap.forEach(d => {
                 const pay = d.data();
-                listEl.innerHTML += `<div class="admin-card">${pay.email}<br>Ref: ${pay.referencia}<br><button onclick="window.approvePayment('${d.id}','${pay.uid}')">Aprobar</button></div>`;
+                listEl.innerHTML += `<div class="admin-card">${pay.email}<br>Ref: ${pay.referencia}<br><button onclick="window.approvePayment('${d.id}','${pay.uid}')" style="background:var(--primary-green);color:white;border:none;padding:5px;border-radius:5px;width:100%;margin-top:5px;">Aprobar</button></div>`;
             });
         };
 
@@ -212,28 +220,76 @@
             alert("¡Activado!"); window.loadAdminPayments();
         };
 
+        window.logout = () => signOut(auth).then(() => location.reload());
+        window.showPremiumModal = () => document.getElementById('premium-modal').style.display = 'flex';
+
+        window.reportarPago = async () => {
+            const ref = document.getElementById('pay-ref').value;
+            if(!ref) return;
+            await addDoc(collection(db, "pagos_pendientes"), { uid: currentUser.uid, email: currentUser.email, referencia: ref, estado: "pendiente", fecha: new Date() });
+            alert("Reporte enviado"); document.getElementById('premium-modal').style.display='none';
+        };
+
+        // CALCULATOR LOGIC
         window.addItem = () => {
-            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
-            const qty = parseFloat(document.getElementById('itemQty').value) || 1;
-            const name = document.getElementById('itemCat').value || document.getElementById('itemNameLibre').value;
-            if(name) {
-                carrito.push({ name, price, qty });
-                totalUSD += (price * qty); window.renderCarrito();
+            const aisle = document.getElementById('itemAisle').value;
+            const cat = document.getElementById('itemCat').value;
+            const price = parseVE(document.getElementById('itemPrice').value);
+            const qty = parseVE(document.getElementById('itemQty').value);
+            const store = document.getElementById('storeName').value || "N/A";
+            if(qty > 0) {
+                const name = (aisle === "OTRO_PASILLO" || cat === "OTRO") ? document.getElementById('itemNameLibre').value : cat;
+                carrito.push({ id: Date.now(), name, price, qty, store });
+                window.renderCarrito();
+                document.getElementById('itemPrice').value = '';
             }
         };
 
         window.renderCarrito = () => {
-            const l = document.getElementById('list'); l.innerHTML = '';
-            carrito.forEach(i => l.innerHTML += `<li>${i.qty} ${i.name} - $${(i.price * i.qty).toFixed(2)}</li>`);
+            const l = document.getElementById('list'); l.innerHTML = ''; totalUSD = 0;
+            carrito.forEach(i => {
+                const sub = i.price * i.qty; totalUSD += sub;
+                l.innerHTML += `<li class="calc-item">${i.qty} ${i.name} - $${sub.toFixed(2)}</li>`;
+            });
             document.getElementById('totalUSD').innerText = totalUSD.toFixed(2);
             document.getElementById('totalVES').innerText = (totalUSD * tasaActual).toFixed(2);
         };
 
-        window.updateRatesManual = () => { tasaActual = parseFloat(document.getElementById('tasaBCVInput').value) || 0; window.renderCarrito(); };
+        window.updateRatesManual = () => { tasaActual = parseVE(document.getElementById('tasaBCVInput').value); window.renderCarrito(); };
+
+        window.guardarHistorialNube = async () => {
+            if(userPlan === "gratis" && historialNube.length >= 1) return window.showPremiumModal();
+            const n = prompt("Nombre de la compra:");
+            if(n) {
+                await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), { nombre: n, items_array: carrito, total: totalUSD, fecha: new Date().toLocaleDateString(), timestamp: new Date() });
+                alert("Guardado"); window.cargarHistorialNube();
+            }
+        };
+
+        window.cargarHistorialNube = async () => {
+            const q = query(collection(db, `usuarios/${currentUser.uid}/historial`));
+            const snap = await getDocs(q);
+            historialNube = []; snap.forEach(d => historialNube.push(d.data()));
+            const hl = document.getElementById('historial-list'); hl.innerHTML = '';
+            historialNube.forEach(h => { hl.innerHTML += `<div class="historial-card"><b>${h.nombre}</b><br>$${h.total.toFixed(2)} - ${h.fecha}</div>`; });
+        };
 
         window.switchTab = (t) => {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById(`tab-${t}`).classList.add('active');
+            document.getElementById(`btn-${t}`).classList.add('active');
+            if(t === 'precios') window.loadCommunity();
+        };
+
+        window.loadCommunity = async () => {
+            const s = await getDocs(collection(db, "productos_comunidad"));
+            const l = document.getElementById('precios-list'); l.innerHTML = '';
+            s.forEach(d => { 
+                const p = d.data(); 
+                let btn = (userPlan === 'gratis') ? '🔒' : '➕';
+                l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">${p.producto} - $${p.precioUSD} ${btn}</div>`; 
+            });
         };
 
         window.inicializarCatalogos = () => {
@@ -242,21 +298,21 @@
             sA.add(new Option("Otro...", "OTRO_PASILLO"));
             const sB = document.getElementById('itemBrand');
             sB.add(new Option("Sin Marca", "Sin Marca"));
-            marcasOficiales.sort().forEach(m => sB.add(new Option(m, m)));
+            marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => sB.add(new Option(m, m)));
+            sB.add(new Option("Otra...", "OTRA"));
+            supermercadosFijos.forEach(s => document.getElementById('cat-supermercados').innerHTML += `<option value="${s}">`);
         };
 
         window.cargarProductosPorCategoria = () => {
             const aisle = document.getElementById('itemAisle').value;
             const sP = document.getElementById('itemCat'); sP.innerHTML = '';
             if(aisle === "OTRO_PASILLO") { sP.style.display="none"; document.getElementById('itemNameLibre').style.display="block"; }
-            else { sP.disabled=false; sP.style.display="block"; document.getElementById('itemNameLibre').style.display="none"; (catalogoPorCategorias[aisle] || []).forEach(p => sP.add(new Option(p, p))); }
+            else { sP.disabled=false; sP.style.display="block"; document.getElementById('itemNameLibre').style.display="none"; (catalogoPorCategorias[aisle] || []).forEach(p => sP.add(new Option(p, p))); sP.add(new Option("Otro...", "OTRO")); }
         };
 
-        window.reportarPago = async () => {
-            const ref = document.getElementById('pay-ref').value;
-            await addDoc(collection(db, "pagos_pendientes"), { uid: currentUser.uid, email: currentUser.email, referencia: ref, estado: "pendiente", fecha: new Date() });
-            alert("Enviado"); document.getElementById('premium-modal').style.display='none';
-        };
+        window.verificarTipoProducto = () => { document.getElementById('itemNameLibre').style.display = document.getElementById('itemCat').value === "OTRO" ? "block" : "none"; };
+        window.verificarMarca = () => { document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none"; };
+        window.vaciarLista = () => { if(confirm("¿Vaciar?")) { carrito = []; window.renderCarrito(); } };
 
         window.inicializarCatalogos();
     </script>
