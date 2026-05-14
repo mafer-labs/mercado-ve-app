@@ -17,10 +17,14 @@
         .unit-select { width: 50%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
         .unit-select:focus { outline: none; }
         #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
-        
-        /* Notificación Toast para cuando agregas desde la comunidad */
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
         @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
+        
+        /* ESTILO PARA OCULTAR EL LOGO DE GOOGLE EXAGERADO EN EL AUTOCOMPLETE Y HACERLO ELEGANTE */
+        .pac-container { border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 4px 10px rgba(0,0,0,0.1); font-family: 'Inter', sans-serif; margin-top: 5px; }
+        .pac-item { padding: 10px; font-size: 13px; color: var(--text-main); cursor: pointer; }
+        .pac-item:hover { background-color: var(--bg-rates); }
+        .pac-item-query { font-size: 14px; font-weight: 600; color: var(--primary-green); }
     </style>
 </head>
 <body>
@@ -32,9 +36,8 @@
             <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
             <ul>
                 <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco. Aparecerán como "Pendientes".</li>
-                <li><strong>Fracciones:</strong> Puedes usar comas (0,5) para medios cartones o kilos.</li>
                 <li><strong>Comunidad:</strong> Busca productos en Explorar y toca ➕ para llevarlos a tu calculadora.</li>
-                <li><strong>Multi-Listas:</strong> Guarda listas en la nube y cárgalas cuando las necesites.</li>
+                <li><strong>Ubicación:</strong> Al escribir el nombre del supermercado, Google te sugerirá la sede exacta.</li>
             </ul>
             <button onclick="document.getElementById('help-modal').style.display='none'" class="btn-main" style="margin-top:20px;">¡Entendido!</button>
         </div>
@@ -76,7 +79,7 @@
 
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
-                <datalist id="cat-supermercados"></datalist>
+                <!-- HEMOS ELIMINADO EL DATALIST VIEJO, AHORA MANDA GOOGLE -->
                 <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()" style="font-weight: 600;"><option value="" disabled selected>🏪 Selecciona un Pasillo...</option></select>
                 <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled><option value="" disabled selected>📦 Primero elige un pasillo...</option></select>
                 <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto personal..." style="display:none;">
@@ -93,7 +96,8 @@
                     <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" style="flex: 1 1 45%;">
                 </div>
                 
-                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
+                <!-- EL INPUT AHORA ES UN BUSCADOR INTELIGENTE -->
+                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Busca la sede del supermercado...">
                 <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
             </div>
             
@@ -114,10 +118,7 @@
 
         <div id="tab-precios" class="tab-content">
             <h3 style="margin-top: 0; margin-bottom: 5px;">Guía de Precios</h3>
-            
-            <!-- NUEVO BUSCADOR COMUNITARIO -->
             <input type="text" id="searchCommunity" class="input-base input-full" placeholder="🔍 Buscar producto o súper..." oninput="window.filterCommunity()" style="margin-bottom: 15px; width: 100%;">
-            
             <div id="precios-list"><p style="text-align: center;" class="text-muted">Cargando precios...</p></div>
         </div>
 
@@ -132,6 +133,10 @@
         <button class="nav-item" id="btn-precios" onclick="window.switchTab('precios')"><span class="nav-icon">🔍</span> Explorar</button>
         <button class="nav-item" id="btn-historial" onclick="window.switchTab('historial')"><span class="nav-icon">📚</span> Historial</button>
     </div>
+
+    <!-- EL SCRIPT DE GOOGLE MAPS PLACES API -->
+    <!-- REEMPLAZA TU_CLAVE_DE_API_AQUI POR TU CLAVE DE GOOGLE CLOUD -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM&libraries=places&callback=initGooglePlaces" async defer></script>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -154,17 +159,31 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
         
-        let currentUser = null;
-        let historialNube = []; 
-        let carrito = []; 
-        let totalUSD = 0;
-        let tasaActual = 0; 
-        let listaActualId = null;
-        let listaActualNombre = "";
+        let currentUser = null; let historialNube = []; let carrito = []; let totalUSD = 0; let tasaActual = 0; let listaActualId = null; let listaActualNombre = "";
 
         const escapeHTML = (str) => { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; };
         const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
         const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
+
+        // === MAGIA DE GOOGLE PLACES ===
+        window.initGooglePlaces = function() {
+            const input = document.getElementById('storeName');
+            const options = {
+                types: ['establishment'],
+                componentRestrictions: { country: 've' } // Restringe búsquedas solo a Venezuela
+            };
+            const autocomplete = new google.maps.places.Autocomplete(input, options);
+            
+            // Cuando el usuario selecciona una opción de la lista
+            autocomplete.addListener('place_changed', function() {
+                const place = autocomplete.getPlace();
+                if (!place.geometry) return;
+                // Formateamos el nombre para que diga: "Gama, La Trinidad"
+                const nombreLimpio = place.name + (place.vicinity ? `, ${place.vicinity.split(',')[0]}` : '');
+                input.value = nombreLimpio;
+            });
+        };
+        // ==============================
 
         let pStart = { y: 0 }; let pCurrent = { y: 0 }; let isPulling = false;
         const ptr = document.getElementById('ptr'); const ptrText = document.getElementById('ptr-text'); const ptrIcon = document.getElementById('ptr-icon');
@@ -172,59 +191,35 @@
         document.addEventListener('touchmove', e => { if (!isPulling) return; pCurrent.y = e.touches[0].clientY; let diff = pCurrent.y - pStart.y; if (diff > 10 && window.scrollY === 0) { ptr.style.display = 'flex'; if (diff > 100) { ptrText.textContent = "Suelta para actualizar"; ptrIcon.textContent = "🔄"; } else { ptrText.textContent = "Desliza para actualizar..."; ptrIcon.textContent = "⬇️"; } } }, {passive: true});
         document.addEventListener('touchend', e => { if (!isPulling) return; isPulling = false; let diff = pCurrent.y - pStart.y; if (diff > 100 && window.scrollY === 0) { ptrText.textContent = "Actualizando..."; ptrIcon.textContent = "⏳"; setTimeout(() => { location.reload(); }, 300); } else { ptr.style.display = 'none'; } });
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) { currentUser = user; document.getElementById('login-screen').style.display = 'none'; document.getElementById('user-controls').style.display = 'flex'; window.cargarHistorialNube(); } 
-            else { currentUser = null; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-controls').style.display = 'none'; }
-        });
-
+        onAuthStateChanged(auth, (user) => { if (user) { currentUser = user; document.getElementById('login-screen').style.display = 'none'; document.getElementById('user-controls').style.display = 'flex'; window.cargarHistorialNube(); } else { currentUser = null; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-controls').style.display = 'none'; } });
         window.loginConGoogle = function() { signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message)); }
         window.logout = function() { signOut(auth); }
 
         window.inicializarCatalogos = function() {
-            const selectAisle = document.getElementById('itemAisle');
-            Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat)));
-            let optOtro = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); optOtro.style.fontWeight = "bold"; selectAisle.add(optOtro);
-            const selectBrand = document.getElementById('itemBrand');
-            marcasOficiales.sort().forEach(m => selectBrand.add(new Option(m, m)));
-            let optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; selectBrand.add(optB);
-            const catSup = document.getElementById('cat-supermercados');
-            supermercadosFijos.forEach(s => catSup.innerHTML += `<option value="${s}">`);
+            const selectAisle = document.getElementById('itemAisle'); Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat))); let optOtro = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); optOtro.style.fontWeight = "bold"; selectAisle.add(optOtro);
+            const selectBrand = document.getElementById('itemBrand'); marcasOficiales.sort().forEach(m => selectBrand.add(new Option(m, m))); let optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; selectBrand.add(optB);
         }
 
         window.cargarProductosPorCategoria = function() {
             const selectAisle = document.getElementById('itemAisle').value; const selectProd = document.getElementById('itemCat'); const inputLibre = document.getElementById('itemNameLibre'); const unitSelect = document.getElementById('itemUnit');
             if (selectAisle === "🥬 Verduras y Frutas" || selectAisle === "🥩 Carnes y Pollos") { unitSelect.value = "kg"; } else { unitSelect.value = "und"; }
             selectProd.innerHTML = '<option value="" disabled selected>📦 Selecciona un Producto...</option>';
-            if (selectAisle === "OTRO_PASILLO") { selectProd.disabled = true; selectProd.style.display = "none"; inputLibre.style.display = "block"; inputLibre.value = ""; } 
-            else { selectProd.disabled = false; selectProd.style.display = "block"; inputLibre.style.display = "none"; const productos = catalogoPorCategorias[selectAisle]; if(productos) productos.sort().forEach(p => selectProd.add(new Option(p, p))); let opt = new Option("✏️ Otro producto...", "OTRO"); opt.style.fontWeight = "bold"; selectProd.add(opt); }
+            if (selectAisle === "OTRO_PASILLO") { selectProd.disabled = true; selectProd.style.display = "none"; inputLibre.style.display = "block"; inputLibre.value = ""; } else { selectProd.disabled = false; selectProd.style.display = "block"; inputLibre.style.display = "none"; const productos = catalogoPorCategorias[selectAisle]; if(productos) productos.sort().forEach(p => selectProd.add(new Option(p, p))); let opt = new Option("✏️ Otro producto...", "OTRO"); opt.style.fontWeight = "bold"; selectProd.add(opt); }
         }
 
         window.verificarTipoProducto = function() { const catSelect = document.getElementById('itemCat'); const unitSelect = document.getElementById('itemUnit'); document.getElementById('itemNameLibre').style.display = catSelect.value === "OTRO" ? "block" : "none"; if (catSelect.value === "Huevos") { unitSelect.value = "cartón"; } }
         window.verificarMarca = function() { document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none"; }
 
-        window.guardarLocal = function() {
-            localStorage.setItem('mercadoVE_carrito_v2', JSON.stringify(carrito)); localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value); localStorage.setItem('mercadoVE_tasaGuardada', document.getElementById('tasaBCVInput').value);
-            if(listaActualId) { localStorage.setItem('mercadoVE_lista_id', listaActualId); localStorage.setItem('mercadoVE_lista_nombre', listaActualNombre); } else { localStorage.removeItem('mercadoVE_lista_id'); localStorage.removeItem('mercadoVE_lista_nombre'); }
-        }
-
-        window.cargarLocal = function() {
-            if(localStorage.getItem('mercadoVE_carrito_v2')) { carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2')); window.renderCarrito(); }
-            if(localStorage.getItem('mercadoVE_lista_id')) { listaActualId = localStorage.getItem('mercadoVE_lista_id'); listaActualNombre = localStorage.getItem('mercadoVE_lista_nombre'); }
-            if(localStorage.getItem('mercadoVE_tasaBinance')) document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance').replace('.', ',');
-            if(localStorage.getItem('mercadoVE_tasaGuardada')) { let savedTasa = localStorage.getItem('mercadoVE_tasaGuardada'); document.getElementById('tasaBCVInput').value = savedTasa.replace('.', ','); tasaActual = parseFloat(savedTasa); }
-        }
-
+        window.guardarLocal = function() { localStorage.setItem('mercadoVE_carrito_v2', JSON.stringify(carrito)); localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value); localStorage.setItem('mercadoVE_tasaGuardada', document.getElementById('tasaBCVInput').value); if(listaActualId) { localStorage.setItem('mercadoVE_lista_id', listaActualId); localStorage.setItem('mercadoVE_lista_nombre', listaActualNombre); } else { localStorage.removeItem('mercadoVE_lista_id'); localStorage.removeItem('mercadoVE_lista_nombre'); } }
+        window.cargarLocal = function() { if(localStorage.getItem('mercadoVE_carrito_v2')) { carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2')); window.renderCarrito(); } if(localStorage.getItem('mercadoVE_lista_id')) { listaActualId = localStorage.getItem('mercadoVE_lista_id'); listaActualNombre = localStorage.getItem('mercadoVE_lista_nombre'); } if(localStorage.getItem('mercadoVE_tasaBinance')) document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance').replace('.', ','); if(localStorage.getItem('mercadoVE_tasaGuardada')) { let savedTasa = localStorage.getItem('mercadoVE_tasaGuardada'); document.getElementById('tasaBCVInput').value = savedTasa.replace('.', ','); tasaActual = parseFloat(savedTasa); } }
         window.vaciarLista = function(sinPreguntar = false) { if(sinPreguntar || confirm("¿Vaciar calculadora actual?")) { carrito = []; listaActualId = null; listaActualNombre = ""; window.renderCarrito(); window.guardarLocal(); document.getElementById('itemAisle').value = ""; document.getElementById('itemCat').innerHTML = '<option value="" disabled selected>📦 Primero elige un pasillo...</option>'; document.getElementById('itemCat').disabled = true; } }
 
         window.renderCarrito = function() {
             const list = document.getElementById('list'); list.innerHTML = ''; let tempTotal = 0;
             carrito.forEach(item => {
-                const itemTotal = item.price * item.qty; tempTotal += itemTotal;
-                const li = document.createElement('li'); li.className = "calc-item";
-                let unitStr = item.unit ? item.unit : "und"; let displayQty = item.qty.toString().replace('.', ',');
+                const itemTotal = item.price * item.qty; tempTotal += itemTotal; const li = document.createElement('li'); li.className = "calc-item"; let unitStr = item.unit ? item.unit : "und"; let displayQty = item.qty.toString().replace('.', ',');
                 const priceDisplay = item.price > 0 ? `<span class="item-price">$${itemTotal.toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`;
-                li.innerHTML = `<div style="display:flex; flex-direction:column;"><span class="item-title">${displayQty} <span style="color:var(--text-muted); font-size:12px; font-weight:normal;">${unitStr}</span> ${item.name}</span><span class="item-store text-muted">📍 ${item.store}</span></div><div style="display:flex; align-items:center;">${priceDisplay}<button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;">✏️</button><button class="btn-delete" onclick="window.deleteItem(${item.id})">✕</button></div>`;
-                list.appendChild(li);
+                li.innerHTML = `<div style="display:flex; flex-direction:column;"><span class="item-title">${displayQty} <span style="color:var(--text-muted); font-size:12px; font-weight:normal;">${unitStr}</span> ${item.name}</span><span class="item-store text-muted">📍 ${item.store}</span></div><div style="display:flex; align-items:center;">${priceDisplay}<button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;">✏️</button><button class="btn-delete" onclick="window.deleteItem(${item.id})">✕</button></div>`; list.appendChild(li);
             });
             totalUSD = tempTotal; window.updateTotals();
         }
@@ -233,64 +228,25 @@
             const aisle = document.getElementById('itemAisle').value; const cat = document.getElementById('itemCat').value; const libre = document.getElementById('itemNameLibre').value; const bCat = document.getElementById('itemBrand').value; const bLibre = document.getElementById('itemBrandLibre').value;
             const qtyStr = document.getElementById('itemQty').value; const qty = qtyStr !== "" ? parseVE(qtyStr) : 1; const unit = document.getElementById('itemUnit').value;
             const priceStr = document.getElementById('itemPrice').value; const price = priceStr !== "" ? parseVE(priceStr) : 0; const store = document.getElementById('storeName').value;
-
             if(!aisle) return alert("Selecciona un pasillo."); if(aisle !== "OTRO_PASILLO" && !cat) return alert("Selecciona un producto."); if(!bCat) return alert("Selecciona una marca.");
-            let fBrand = bCat === "OTRA" ? sanitize(bLibre, 30) : (bCat !== "Sin Marca" ? bCat : ""); let fName = (aisle === "OTRO_PASILLO" || cat === "OTRO") ? sanitize(libre, 50) : cat; let fStore = sanitize(store, 40) || "No especificado";
+            let fBrand = bCat === "OTRA" ? sanitize(bLibre, 30) : (bCat !== "Sin Marca" ? bCat : ""); let fName = (aisle === "OTRO_PASILLO" || cat === "OTRO") ? sanitize(libre, 50) : cat; let fStore = sanitize(store, 60) || "No especificado";
             fName += fBrand ? ` (${fBrand})` : "";
-
             if(qty > 0 && price >= 0) {
-                let isCommunity = (aisle !== "OTRO_PASILLO" && cat !== "OTRO");
-                carrito.push({ id: Date.now(), name: fName, price: price, qty: qty, unit: unit, store: fStore, isCommunity: isCommunity });
-                window.renderCarrito(); window.guardarLocal();
+                let isCommunity = (aisle !== "OTRO_PASILLO" && cat !== "OTRO"); carrito.push({ id: Date.now(), name: fName, price: price, qty: qty, unit: unit, store: fStore, isCommunity: isCommunity }); window.renderCarrito(); window.guardarLocal();
                 if(isCommunity && price > 0) { try { await addDoc(collection(db, "productos_comunidad"), { producto: fName, precioUSD: price, unidad: unit, supermercado: fStore, fecha: new Date(), reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo" }); } catch(e) {} }
                 document.getElementById('itemAisle').value=""; document.getElementById('itemCat').innerHTML='<option value="" disabled selected>📦 Primero elige un pasillo...</option>'; document.getElementById('itemCat').disabled = true; document.getElementById('itemNameLibre').value=""; document.getElementById('itemNameLibre').style.display="none"; document.getElementById('itemBrand').value=""; document.getElementById('itemBrandLibre').value=""; document.getElementById('itemBrandLibre').style.display="none"; document.getElementById('itemQty').value='1'; document.getElementById('itemUnit').value='und'; document.getElementById('itemPrice').value='';
             } else alert("Cantidad inválida.");
         }
 
-        window.editPrice = async function(id) {
-            let item = carrito.find(i => i.id === id); if(!item) return;
-            let prevPrice = item.price > 0 ? item.price.toString().replace('.', ',') : '';
-            let newPriceStr = prompt(`Precio unitario (x 1 ${item.unit || 'und'}) en $ para:\n${item.name}`, prevPrice);
-            if(newPriceStr !== null) { let newPrice = parseVE(newPriceStr); if(!isNaN(newPrice) && newPrice >= 0) { item.price = newPrice; window.renderCarrito(); window.guardarLocal(); if(item.isCommunity && newPrice > 0 && prevPrice === '') { try { await addDoc(collection(db, "productos_comunidad"), { producto: item.name, precioUSD: newPrice, unidad: item.unit || "und", supermercado: item.store, fecha: new Date(), reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo" }); } catch(e) {} } } else alert("Precio inválido."); }
-        }
-
+        window.editPrice = async function(id) { let item = carrito.find(i => i.id === id); if(!item) return; let prevPrice = item.price > 0 ? item.price.toString().replace('.', ',') : ''; let newPriceStr = prompt(`Precio unitario (x 1 ${item.unit || 'und'}) en $ para:\n${item.name}`, prevPrice); if(newPriceStr !== null) { let newPrice = parseVE(newPriceStr); if(!isNaN(newPrice) && newPrice >= 0) { item.price = newPrice; window.renderCarrito(); window.guardarLocal(); if(item.isCommunity && newPrice > 0 && prevPrice === '') { try { await addDoc(collection(db, "productos_comunidad"), { producto: item.name, precioUSD: newPrice, unidad: item.unit || "und", supermercado: item.store, fecha: new Date(), reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo" }); } catch(e) {} } } else alert("Precio inválido."); } }
         window.deleteItem = function(id) { carrito = carrito.filter(i => i.id !== id); window.renderCarrito(); window.guardarLocal(); }
 
-        window.updateTotals = function() {
-            document.getElementById('totalUSD').textContent = totalUSD.toFixed(2); const tVES = totalUSD * tasaActual; document.getElementById('totalVES').textContent = tVES.toFixed(2);
-            const tbStr = document.getElementById('tasaBinanceInput').value; const tb = tbStr !== "" ? parseVE(tbStr) : 0; const txt = document.getElementById('ahorroText');
-            if(tb>0 && tVES>0) { const tUSDT = tVES / tb; document.getElementById('totalUSDT').textContent = tUSDT.toFixed(2); const a = totalUSD - tUSDT; if(a>0) { txt.textContent = `💰 Ahorraste $${a.toFixed(2)}`; txt.className = "ahorro-text text-green"; } else if(a<0) { txt.textContent = `⚠️ Pierdes $${Math.abs(a).toFixed(2)}`; txt.className = "ahorro-text text-red"; } else { txt.textContent = "Sin diferencia cambiaria."; txt.className = "ahorro-text text-muted"; } } else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; }
-        }
+        window.updateTotals = function() { document.getElementById('totalUSD').textContent = totalUSD.toFixed(2); const tVES = totalUSD * tasaActual; document.getElementById('totalVES').textContent = tVES.toFixed(2); const tbStr = document.getElementById('tasaBinanceInput').value; const tb = tbStr !== "" ? parseVE(tbStr) : 0; const txt = document.getElementById('ahorroText'); if(tb>0 && tVES>0) { const tUSDT = tVES / tb; document.getElementById('totalUSDT').textContent = tUSDT.toFixed(2); const a = totalUSD - tUSDT; if(a>0) { txt.textContent = `💰 Ahorraste $${a.toFixed(2)}`; txt.className = "ahorro-text text-green"; } else if(a<0) { txt.textContent = `⚠️ Pierdes $${Math.abs(a).toFixed(2)}`; txt.className = "ahorro-text text-red"; } else { txt.textContent = "Sin diferencia cambiaria."; txt.className = "ahorro-text text-muted"; } } else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; } }
 
-        window.guardarHistorialNube = async function() {
-            if(!currentUser) return alert("Inicia sesión primero."); if(carrito.length === 0) return alert("Lista vacía.");
-            if(carrito.some(i => i.price === 0)) if(!confirm("Tienes productos con precio 'Pendiente'. ¿Seguro que quieres guardar la lista así?")) return;
-            const tbStr = document.getElementById('tasaBinanceInput').value; const tasaB = tbStr !== "" ? parseVE(tbStr) : 0; 
-            const totVES = totalUSD * tasaActual; const totUSDT = tasaB > 0 ? (totVES / tasaB) : 0; const ahorro = totalUSD - totUSDT;
-            let dataToSave = { fecha: new Date().toLocaleDateString(), timestamp: new Date(), items_array: carrito, total: totalUSD, tasaBCV_guardada: tasaActual, tasaBinance_guardada: tasaB, totalVES_guardado: totVES, totalUSDT_guardado: totUSDT, ahorro_guardado: ahorro };
+        window.guardarHistorialNube = async function() { if(!currentUser) return alert("Inicia sesión primero."); if(carrito.length === 0) return alert("Lista vacía."); if(carrito.some(i => i.price === 0)) if(!confirm("Tienes productos con precio 'Pendiente'. ¿Seguro que quieres guardar la lista así?")) return; const tbStr = document.getElementById('tasaBinanceInput').value; const tasaB = tbStr !== "" ? parseVE(tbStr) : 0; const totVES = totalUSD * tasaActual; const totUSDT = tasaB > 0 ? (totVES / tasaB) : 0; const ahorro = totalUSD - totUSDT; let dataToSave = { fecha: new Date().toLocaleDateString(), timestamp: new Date(), items_array: carrito, total: totalUSD, tasaBCV_guardada: tasaActual, tasaBinance_guardada: tasaB, totalVES_guardado: totVES, totalUSDT_guardado: totUSDT, ahorro_guardado: ahorro }; if (listaActualId) { if(confirm(`¿Guardar cambios en "${listaActualNombre}"?`)) { dataToSave.nombre = listaActualNombre; try { await updateDoc(doc(db, `usuarios/${currentUser.uid}/historial`, listaActualId), dataToSave); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); return; } catch(e) { alert("Error al actualizar."); return; } } } let nombreLista = prompt("Nombre para identificar esta compra:"); if(!nombreLista) return; dataToSave.nombre = sanitize(nombreLista, 50); try { await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), dataToSave); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); } catch(e) { alert("Error guardando."); } }
+        window.cargarHistorialNube = async function() { if(!currentUser) return; const hl = document.getElementById('historial-list'); hl.innerHTML = '<p class="text-muted" style="text-align:center;">Sincronizando... ☁️</p>'; try { const snapshot = await getDocs(query(collection(db, `usuarios/${currentUser.uid}/historial`))); historialNube = []; snapshot.forEach(doc => historialNube.push({ id: doc.id, ...doc.data() })); historialNube.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds); window.renderHistorialPantalla(); } catch(e) { hl.innerHTML = '<p class="text-red" style="text-align:center;">Error de conexión.</p>'; } }
 
-            if (listaActualId) { if(confirm(`¿Guardar cambios en "${listaActualNombre}"?`)) { dataToSave.nombre = listaActualNombre; try { await updateDoc(doc(db, `usuarios/${currentUser.uid}/historial`, listaActualId), dataToSave); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); return; } catch(e) { alert("Error al actualizar."); return; } } }
-            let nombreLista = prompt("Nombre para identificar esta compra:"); if(!nombreLista) return; dataToSave.nombre = sanitize(nombreLista, 50);
-            try { await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), dataToSave); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); } catch(e) { alert("Error guardando."); }
-        }
-
-        window.cargarHistorialNube = async function() {
-            if(!currentUser) return; const hl = document.getElementById('historial-list'); hl.innerHTML = '<p class="text-muted" style="text-align:center;">Sincronizando... ☁️</p>';
-            try { const snapshot = await getDocs(query(collection(db, `usuarios/${currentUser.uid}/historial`))); historialNube = []; snapshot.forEach(doc => historialNube.push({ id: doc.id, ...doc.data() })); historialNube.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds); window.renderHistorialPantalla(); } catch(e) { hl.innerHTML = '<p class="text-red" style="text-align:center;">Error de conexión.</p>'; }
-        }
-
-        window.renderHistorialPantalla = function() {
-            const hl = document.getElementById('historial-list'); if(historialNube.length === 0) return hl.innerHTML = '<p class="text-muted" style="text-align:center;">No hay listas guardadas.</p>'; hl.innerHTML = '';
-            historialNube.forEach(compra => {
-                const div = document.createElement('div'); div.className = 'historial-card';
-                let ahorroH = (compra.ahorro_guardado && compra.tasaBinance_guardada > 0) ? (compra.ahorro_guardado > 0 ? `<p class="text-green" style="font-weight:600; margin-top:8px;">💰 Ahorro: $${compra.ahorro_guardado.toFixed(2)}</p>` : `<p class="text-red" style="font-weight:600; margin-top:8px;">⚠️ Pierde: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`) : "";
-                let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : '';
-                let safeListHTML = "";
-                if (compra.items_array) { compra.items_array.forEach(item => { const sName = escapeHTML(item.name); const sStore = escapeHTML(item.store); const sUnit = escapeHTML(item.unit || "und"); let displayQty = item.qty.toString().replace('.', ','); safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${displayQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`; }); } else { safeListHTML = `<p class="text-muted" style="font-size: 12px;">⚠️ Formato antiguo.</p>`; }
-                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div class="historial-snapshot"><p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p><p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2).replace('.', ',') || "0,00"} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2).replace('.', ',') || "0,00"}</p><hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;"><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${(compra.total || 0).toFixed(2)}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2).replace('.', ',') || "0,00"}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2).replace('.', ',') || "0,00"}</b></div>${ahorroH}</div><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`;
-                hl.appendChild(div);
-            });
-        }
+        window.renderHistorialPantalla = function() { const hl = document.getElementById('historial-list'); if(historialNube.length === 0) return hl.innerHTML = '<p class="text-muted" style="text-align:center;">No hay listas guardadas.</p>'; hl.innerHTML = ''; historialNube.forEach(compra => { const div = document.createElement('div'); div.className = 'historial-card'; let ahorroH = (compra.ahorro_guardado && compra.tasaBinance_guardada > 0) ? (compra.ahorro_guardado > 0 ? `<p class="text-green" style="font-weight:600; margin-top:8px;">💰 Ahorro: $${compra.ahorro_guardado.toFixed(2)}</p>` : `<p class="text-red" style="font-weight:600; margin-top:8px;">⚠️ Pierde: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`) : ""; let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : ''; let safeListHTML = ""; if (compra.items_array) { compra.items_array.forEach(item => { const sName = escapeHTML(item.name); const sStore = escapeHTML(item.store); const sUnit = escapeHTML(item.unit || "und"); let displayQty = item.qty.toString().replace('.', ','); safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${displayQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`; }); } else { safeListHTML = `<p class="text-muted" style="font-size: 12px;">⚠️ Formato antiguo.</p>`; } div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div class="historial-snapshot"><p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p><p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2).replace('.', ',') || "0,00"} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2).replace('.', ',') || "0,00"}</p><hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;"><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${(compra.total || 0).toFixed(2)}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2).replace('.', ',') || "0,00"}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2).replace('.', ',') || "0,00"}</b></div>${ahorroH}</div><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`; hl.appendChild(div); }); }
 
         window.toggleHistorial = function(id) { const d = document.getElementById(`detalles-${id}`); d.style.display = (d.style.display === "none" || d.style.display === "") ? "block" : "none"; }
         window.cargarA_Calculadora = function(id) { if (carrito.length > 0) if (!confirm("¿Reemplazar calculadora actual?")) return; let compra = historialNube.find(c => c.id === id); if (compra && compra.items_array) { carrito = compra.items_array; if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual.toString().replace('.', ','); } if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada.toString().replace('.', ','); } listaActualId = id; listaActualNombre = compra.nombre; window.renderCarrito(); window.guardarLocal(); window.switchTab('lista'); } }
@@ -298,75 +254,15 @@
 
         window.loadCommunity = async function() {
             const listEl = document.getElementById('precios-list'); listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Cargando...</p>';
-            try {
-                const snapshot = await getDocs(query(collection(db, "productos_comunidad"))); let docs = []; snapshot.forEach(d => docs.push(d.data()));
-                let agrupados = {}; docs.forEach(data => { let prod = data.producto; let sup = data.supermercado || "N/A"; let autor = data.reportadoPor || "Anónimo"; let uni = data.unidad || "und"; if(!agrupados[prod]) agrupados[prod] = {}; agrupados[prod][sup] = { p: data.precioUSD, a: autor, u: uni }; });
-                listEl.innerHTML = ''; const nombres = Object.keys(agrupados).sort();
-                if(nombres.length === 0) return listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Sin datos.</p>';
-                nombres.forEach(prod => {
-                    const div = document.createElement('div'); div.className = 'prod-group';
-                    let html = `<div class="prod-header">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list">`;
-                    const tiendas = Object.keys(agrupados[prod]).sort((a,b) => agrupados[prod][a].p - agrupados[prod][b].p);
-                    tiendas.forEach((t, i) => { 
-                        const info = agrupados[prod][t]; 
-                        const pSafe = escapeHTML(prod).replace(/'/g, "\\'");
-                        const tSafe = escapeHTML(t).replace(/'/g, "\\'");
-                        const uSafe = escapeHTML(info.u).replace(/'/g, "\\'");
-                        
-                        html += `
-                            <li class="prod-store-item">
-                                <div style="display:flex; flex-direction:column;">
-                                    <span class="text-main">${i===0 && tiendas.length>1 ? '🏆' : '📍'} ${escapeHTML(t)}</span>
-                                    <span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${escapeHTML(info.a)}</span>
-                                </div>
-                                <div style="display:flex; align-items:center; gap: 10px;">
-                                    <span class="${i===0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size: 11px; color: var(--text-muted); font-weight:normal;">x ${escapeHTML(info.u)}</span></span>
-                                    <button onclick="window.addFromCommunity('${pSafe}', ${info.p}, '${uSafe}', '${tSafe}')" style="background: var(--primary-green); color: white; border: none; border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px;">➕</button>
-                                </div>
-                            </li>`; 
-                    });
-                    div.innerHTML = html + `</ul>`; listEl.appendChild(div);
-                });
-            } catch (e) { listEl.innerHTML = '<p class="text-red" style="text-align:center;">Error.</p>'; }
+            try { const snapshot = await getDocs(query(collection(db, "productos_comunidad"))); let docs = []; snapshot.forEach(d => docs.push(d.data())); let agrupados = {}; docs.forEach(data => { let prod = data.producto; let sup = data.supermercado || "N/A"; let autor = data.reportadoPor || "Anónimo"; let uni = data.unidad || "und"; if(!agrupados[prod]) agrupados[prod] = {}; agrupados[prod][sup] = { p: data.precioUSD, a: autor, u: uni }; }); listEl.innerHTML = ''; const nombres = Object.keys(agrupados).sort(); if(nombres.length === 0) return listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Sin datos.</p>'; nombres.forEach(prod => { const div = document.createElement('div'); div.className = 'prod-group'; let html = `<div class="prod-header">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list">`; const tiendas = Object.keys(agrupados[prod]).sort((a,b) => agrupados[prod][a].p - agrupados[prod][b].p); tiendas.forEach((t, i) => { const info = agrupados[prod][t]; const pSafe = escapeHTML(prod).replace(/'/g, "\\'"); const tSafe = escapeHTML(t).replace(/'/g, "\\'"); const uSafe = escapeHTML(info.u).replace(/'/g, "\\'"); html += `<li class="prod-store-item"><div style="display:flex; flex-direction:column;"><span class="text-main">${i===0 && tiendas.length>1 ? '🏆' : '📍'} ${escapeHTML(t)}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${escapeHTML(info.a)}</span></div><div style="display:flex; align-items:center; gap: 10px;"><span class="${i===0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size: 11px; color: var(--text-muted); font-weight:normal;">x ${escapeHTML(info.u)}</span></span><button onclick="window.addFromCommunity('${pSafe}', ${info.p}, '${uSafe}', '${tSafe}')" style="background: var(--primary-green); color: white; border: none; border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px;">➕</button></div></li>`; }); div.innerHTML = html + `</ul>`; listEl.appendChild(div); }); } catch (e) { listEl.innerHTML = '<p class="text-red" style="text-align:center;">Error.</p>'; }
         }
 
-        // FUNCIONES NUEVAS: FILTRAR Y AGREGAR DESDE COMUNIDAD
-        window.filterCommunity = function() {
-            const query = document.getElementById('searchCommunity').value.toLowerCase();
-            const groups = document.querySelectorAll('.prod-group');
-            groups.forEach(group => {
-                const text = group.innerText.toLowerCase();
-                group.style.display = text.includes(query) ? 'block' : 'none';
-            });
-        }
-
-        window.addFromCommunity = function(name, price, unit, store) {
-            carrito.push({ id: Date.now(), name: name, price: parseFloat(price), qty: 1, unit: unit, store: store, isCommunity: true });
-            window.renderCarrito(); window.guardarLocal();
-            
-            // Mostrar notificación
-            const toast = document.getElementById('toast');
-            toast.style.display = 'block';
-            setTimeout(() => { toast.style.display = 'none'; }, 2500);
-        }
-
-        window.switchTab = function(tab) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tab}`).classList.add('active'); document.getElementById(`btn-${tab}`).classList.add('active');
-            if(tab === 'precios') window.loadCommunity(); if(tab === 'historial') window.renderHistorialPantalla();
-        }
-
-        window.fetchRates = async function() {
-            try {
-                const res = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar'); const data = await res.json();
-                const inBcv = document.getElementById('tasaBCVInput'); const inBin = document.getElementById('tasaBinanceInput');
-                if(!inBcv.value || inBcv.value==="0" || inBcv.value==="") inBcv.value = data.monitors.bcv.price.toFixed(2).replace('.', ',');
-                if(!inBin.value || inBin.value==="0" || inBin.value==="") inBin.value = data.monitors.binance.price.toFixed(2).replace('.', ',');
-                tasaActual = parseFloat(data.monitors.bcv.price); window.guardarLocal(); window.updateTotals();
-            } catch (e) { window.cargarLocal(); window.updateTotals(); }
-        }
-
+        window.filterCommunity = function() { const query = document.getElementById('searchCommunity').value.toLowerCase(); const groups = document.querySelectorAll('.prod-group'); groups.forEach(group => { const text = group.innerText.toLowerCase(); group.style.display = text.includes(query) ? 'block' : 'none'; }); }
+        window.addFromCommunity = function(name, price, unit, store) { carrito.push({ id: Date.now(), name: name, price: parseFloat(price), qty: 1, unit: unit, store: store, isCommunity: true }); window.renderCarrito(); window.guardarLocal(); const toast = document.getElementById('toast'); toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 2500); }
+        window.switchTab = function(tab) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tab}`).classList.add('active'); document.getElementById(`btn-${tab}`).classList.add('active'); if(tab === 'precios') window.loadCommunity(); if(tab === 'historial') window.renderHistorialPantalla(); }
+        window.fetchRates = async function() { try { const res = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar'); const data = await res.json(); const inBcv = document.getElementById('tasaBCVInput'); const inBin = document.getElementById('tasaBinanceInput'); if(!inBcv.value || inBcv.value==="0" || inBcv.value==="") inBcv.value = data.monitors.bcv.price.toFixed(2).replace('.', ','); if(!inBin.value || inBin.value==="0" || inBin.value==="") inBin.value = data.monitors.binance.price.toFixed(2).replace('.', ','); tasaActual = parseFloat(data.monitors.bcv.price); window.guardarLocal(); window.updateTotals(); } catch (e) { window.cargarLocal(); window.updateTotals(); } }
         window.updateRatesManual = function() { const val = document.getElementById('tasaBCVInput').value; const v = parseVE(val); if(v>0) tasaActual=v; window.updateTotals(); window.guardarLocal(); }
+        
         window.inicializarCatalogos(); window.cargarLocal(); window.fetchRates();
     </script>
 </body>
