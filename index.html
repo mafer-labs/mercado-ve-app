@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-<style>
+    <style>
         /* Bloqueamos el movimiento horizontal para siempre */
         body { overflow-x: hidden; } 
         
@@ -20,7 +20,7 @@
         .unit-select { width: 50%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
         .unit-select:focus { outline: none; }
         
-        /* EL FIX: Pull to refresh flotante y elegante */
+        /* Pull to refresh flotante y elegante */
         #ptr { 
             position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; 
             background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
@@ -31,10 +31,12 @@
     </style>
 </head>
 <body>
+    <!-- INDICADOR PULL TO REFRESH -->
     <div id="ptr">
         <span id="ptr-icon">⬇️</span> <span id="ptr-text">Desliza para actualizar...</span>
     </div>
 
+    <!-- MODAL DE AYUDA -->
     <div id="help-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
@@ -48,6 +50,7 @@
         </div>
     </div>
 
+    <!-- PANTALLA DE LOGIN -->
     <div id="login-screen">
         <h1 style="font-size: 36px; color: var(--primary-green); margin-bottom: 10px; font-weight: 800;">CuentaClara</h1>
         <p style="color: var(--text-muted); font-size: 16px; max-width: 300px;">Tu mercado al mejor cambio.</p>
@@ -58,6 +61,7 @@
     </div>
 
     <div class="container">
+        <!-- CABECERA -->
         <div class="header-top">
             <h1><span style="color: var(--primary-green);">Cuenta</span>Clara</h1>
             <div class="user-controls" id="user-controls">
@@ -66,6 +70,7 @@
             </div>
         </div>
         
+        <!-- ZONA DE TASAS -->
         <div class="rates-box">
             <div class="rate-row">
                 <span class="rate-label text-blue">🇻🇪 Tasa BCV ✏️</span>
@@ -83,24 +88,29 @@
             </div>
         </div>
 
+        <!-- PESTAÑA 1: CALCULADORA -->
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
                 <datalist id="cat-supermercados"></datalist>
                 
+                <!-- 1. EL PASILLO -->
                 <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()" style="font-weight: 600;">
                     <option value="" disabled selected>🏪 Selecciona un Pasillo...</option>
                 </select>
 
+                <!-- 2. EL PRODUCTO -->
                 <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled>
                     <option value="" disabled selected>📦 Primero elige un pasillo...</option>
                 </select>
                 <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto personal..." style="display:none;">
 
+                <!-- 3. MARCA -->
                 <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()">
                     <option value="" disabled selected>🏷️ Marca...</option>
                 </select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
                 
+                <!-- 4. CAJA DE CANTIDAD + UNIDAD Y PRECIO UNITARIO -->
                 <div style="display: flex; gap: 8px; width: 100%;">
                     <div class="qty-unit-box">
                         <input type="number" id="itemQty" class="qty-input" placeholder="Cant." value="1" min="0.01" step="0.01">
@@ -114,6 +124,7 @@
                     <input type="number" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" step="0.01" style="flex: 1 1 45%;">
                 </div>
 
+                <!-- 5. LUGAR -->
                 <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
                 
                 <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
@@ -266,7 +277,6 @@
             const inputLibre = document.getElementById('itemNameLibre');
             const unitSelect = document.getElementById('itemUnit');
             
-            // SMART UX: Cambiar a kg automáticamente si es verdura o carne
             if (selectAisle === "🥬 Verduras y Frutas" || selectAisle === "🥩 Carnes y Pollos") {
                 unitSelect.value = "kg";
             } else {
@@ -355,7 +365,6 @@
             const bCat = document.getElementById('itemBrand').value; 
             const bLibre = document.getElementById('itemBrandLibre').value.trim();
             
-            // AHORA USAMOS PARSEFLOAT PARA ACEPTAR DECIMALES
             const qty = parseFloat(document.getElementById('itemQty').value)||1; 
             const unit = document.getElementById('itemUnit').value;
             
@@ -379,13 +388,11 @@
             fName += fBrand ? ` (${fBrand})` : "";
 
             if(qty > 0 && price >= 0) {
-                // Guardamos la unidad en el carrito
                 carrito.push({ id: Date.now(), name: fName, price: price, qty: qty, unit: unit, store: store, isCommunity: isCommunity });
                 window.renderCarrito(); window.guardarLocal();
 
                 if(isCommunity && price > 0) {
                     try {
-                        // Guardamos la unidad en Firebase
                         await addDoc(collection(db, "productos_comunidad"), { 
                             producto: fName, precioUSD: price, unidad: unit, supermercado: store, fecha: new Date(), reportadoPor: currentUser ? currentUser.displayName.split(' ')[0] : "Anónimo"
                         });
@@ -440,6 +447,9 @@
             } else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; }
         }
 
+        // ==========================================
+        // FIX DE SEGURIDAD FASE 1: SIN INNER HTML
+        // ==========================================
         window.guardarHistorialNube = async function() {
             if(!currentUser) return alert("Inicia sesión primero.");
             if(carrito.length === 0) return alert("Lista vacía.");
@@ -449,7 +459,9 @@
             const totVES = totalUSD * tasaActual; const totUSDT = tasaB > 0 ? (totVES / tasaB) : 0; const ahorro = totalUSD - totUSDT;
 
             let dataToSave = { 
-                fecha: new Date().toLocaleDateString(), timestamp: new Date(), html: document.getElementById('list').innerHTML, items_array: carrito, 
+                fecha: new Date().toLocaleDateString(), timestamp: new Date(), 
+                // ELIMINADO EL GUARDADO DE HTML CRUDO
+                items_array: carrito, 
                 total: totalUSD, tasaBCV_guardada: tasaActual, tasaBinance_guardada: tasaB, totalVES_guardado: totVES, totalUSDT_guardado: totUSDT, ahorro_guardado: ahorro
             };
 
@@ -481,6 +493,13 @@
             } catch(e) { hl.innerHTML = '<p class="text-red" style="text-align:center;">Error de conexión.</p>'; }
         }
 
+        // Función de seguridad interna para limpiar HTML malicioso (Safe DOM Construction)
+        const escapeHTML = (str) => {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        };
+
         window.renderHistorialPantalla = function() {
             const hl = document.getElementById('historial-list');
             if(historialNube.length === 0) return hl.innerHTML = '<p class="text-muted" style="text-align:center;">No hay listas guardadas.</p>';
@@ -493,33 +512,67 @@
                     if (compra.ahorro_guardado > 0) ahorroH = `<p class="text-green" style="font-weight:600; margin-top:8px;">💰 Ahorro: $${compra.ahorro_guardado.toFixed(2)}</p>`;
                     else if (compra.ahorro_guardado < 0) ahorroH = `<p class="text-red" style="font-weight:600; margin-top:8px;">⚠️ Pérdida: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`;
                 }
+                
                 let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : '';
+
+                // CONSTRUCCIÓN SEGURA DE LA LISTA
+                let safeListHTML = "";
+                if (compra.items_array) {
+                    compra.items_array.forEach(item => {
+                        const sName = escapeHTML(item.name);
+                        const sStore = escapeHTML(item.store);
+                        const sUnit = escapeHTML(item.unit || "und");
+                        const itemTotal = (item.price * item.qty).toFixed(2);
+                        
+                        const priceDisplay = item.price > 0 
+                            ? `<span style="font-weight: 700; font-size: 15px;">$${itemTotal}</span>` 
+                            : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`;
+
+                        safeListHTML += `
+                            <li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span style="font-weight:600; font-size:14px;">${item.qty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span>
+                                    <span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span>
+                                </div>
+                                <div>${priceDisplay}</div>
+                            </li>
+                        `;
+                    });
+                } else {
+                    safeListHTML = `<p class="text-muted" style="font-size: 12px;">⚠️ Lista antigua guardada sin formato seguro.</p>`;
+                }
 
                 div.innerHTML = `
                     <div class="historial-header" onclick="window.toggleHistorial('${compra.id}')">
-                        <div><b class="text-main" style="font-size: 15px;">📝 ${compra.nombre}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div>
-                        <div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${compra.total.toFixed(2)}</b></div>
+                        <div>
+                            <b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b>
+                            <div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b>
+                        </div>
                     </div>
                     <div id="detalles-${compra.id}" class="historial-details">
-                        <ul style="margin-bottom:15px;">${compra.html}</ul>
+                        <ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul>
                         <div class="historial-snapshot">
                             <p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p>
-                            <p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2)} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2)}</p>
+                            <p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2) || "0.00"} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2) || "0.00"}</p>
                             <hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;">
-                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${compra.total.toFixed(2)}</b></div>
-                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2)}</b></div>
-                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2)}</b></div>
+                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${(compra.total || 0).toFixed(2)}</b></div>
+                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2) || "0.00"}</b></div>
+                            <div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2) || "0.00"}</b></div>
                             ${ahorroH}
                         </div>
                         <div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">
                             ${btnCargar}
                             <button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button>
                         </div>
-                    </div>`;
-                div.querySelectorAll('.btn-delete').forEach(btn => btn.remove()); div.querySelectorAll('.btn-edit').forEach(btn => btn.remove());
+                    </div>
+                `;
                 hl.appendChild(div);
             });
         }
+        // ==========================================
 
         window.toggleHistorial = function(id) { const d = document.getElementById(`detalles-${id}`); d.style.display = (d.style.display === "none" || d.style.display === "") ? "block" : "none"; }
         
@@ -556,7 +609,7 @@
                 
                 nombres.forEach(prod => {
                     const div = document.createElement('div'); div.className = 'prod-group';
-                    let html = `<div class="prod-header">🛒 ${prod}</div><ul class="prod-store-list">`;
+                    let html = `<div class="prod-header">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list">`;
                     const tiendas = Object.keys(agrupados[prod]).sort((a,b) => agrupados[prod][a].p - agrupados[prod][b].p);
                     
                     tiendas.forEach((t, i) => {
@@ -564,10 +617,10 @@
                         html += `
                             <li class="prod-store-item">
                                 <div style="display:flex; flex-direction:column;">
-                                    <span class="text-main">${i===0 && tiendas.length>1 ? '🏆' : '📍'} ${t}</span>
-                                    <span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${info.a}</span>
+                                    <span class="text-main">${i===0 && tiendas.length>1 ? '🏆' : '📍'} ${escapeHTML(t)}</span>
+                                    <span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${escapeHTML(info.a)}</span>
                                 </div>
-                                <span class="${i===0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size: 11px; color: var(--text-muted); font-weight:normal;">x ${info.u}</span></span>
+                                <span class="${i===0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size: 11px; color: var(--text-muted); font-weight:normal;">x ${escapeHTML(info.u)}</span></span>
                             </li>`;
                     });
                     div.innerHTML = html + `</ul>`; listEl.appendChild(div);
