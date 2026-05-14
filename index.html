@@ -33,7 +33,7 @@
             <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
             <ul>
                 <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco. Aparecerán como "Pendientes".</li>
-                <li><strong>Fracciones:</strong> Puedes colocar "1.5" en cantidad y seleccionar "kg".</li>
+                <li><strong>Fracciones:</strong> Puedes usar comas (0,5) para medios cartones o kilos.</li>
                 <li><strong>Multi-Listas:</strong> Guarda listas en la nube y cárgalas cuando las necesites.</li>
                 <li><strong>Seguridad:</strong> Tus datos ahora se limpian automáticamente antes de guardarse.</li>
             </ul>
@@ -63,14 +63,15 @@
                 <span class="rate-label text-blue">🇻🇪 Tasa BCV ✏️</span>
                 <div class="rate-input-container">
                     <span class="text-muted" style="font-size: 11px;">Bs.</span> 
-                    <input type="number" id="tasaBCVInput" class="rate-input text-blue" placeholder="36.50" step="0.01" oninput="window.updateRatesManual()">
+                    <!-- AHORA USAMOS inputmode="decimal" PARA PERMITIR LA COMA -->
+                    <input type="text" inputmode="decimal" id="tasaBCVInput" class="rate-input text-blue" placeholder="36,50" oninput="window.updateRatesManual()">
                 </div>
             </div>
             <div class="rate-row">
                 <span class="rate-label text-green">🔄 Venta USD ✏️</span>
                 <div class="rate-input-container">
                     <span class="text-muted" style="font-size: 11px;">Bs.</span> 
-                    <input type="number" id="tasaBinanceInput" class="rate-input text-green" placeholder="41.50" step="0.01" oninput="window.updateRatesManual()">
+                    <input type="text" inputmode="decimal" id="tasaBinanceInput" class="rate-input text-green" placeholder="41,50" oninput="window.updateRatesManual()">
                 </div>
             </div>
         </div>
@@ -89,22 +90,28 @@
                     <option value="" disabled selected>🏷️ Marca...</option>
                 </select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
+                
                 <div style="display: flex; gap: 8px; width: 100%;">
                     <div class="qty-unit-box">
-                        <input type="number" id="itemQty" class="qty-input" placeholder="Cant." value="1" min="0.01" step="0.01">
+                        <input type="text" inputmode="decimal" id="itemQty" class="qty-input" placeholder="Cant." value="1">
                         <select id="itemUnit" class="unit-select">
                             <option value="und">und</option>
                             <option value="kg">kg</option>
                             <option value="g">g</option>
                             <option value="L">L</option>
+                            <!-- AGREGADA LA OPCIÓN CARTÓN -->
+                            <option value="cartón">cartón</option>
                         </select>
                     </div>
-                    <input type="number" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" step="0.01" style="flex: 1 1 45%;">
+                    <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" style="flex: 1 1 45%;">
                 </div>
+                
                 <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
                 <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
             </div>
+            
             <ul id="list"></ul>
+            
             <div class="total-box">
                 <p class="total-box-row">Suma en USD: <b class="text-main">$<span id="totalUSD">0.00</span></b></p>
                 <h4 class="total-box-bcv">Pagar en caja: Bs <span id="totalVES">0.00</span></h4>
@@ -165,7 +172,7 @@
         let listaActualNombre = "";
 
         // ==========================================
-        // FUNCIONES DE SEGURIDAD (PASO 1 Y 2)
+        // FUNCIONES DE SEGURIDAD Y LOCALIZACIÓN (COMAS)
         // ==========================================
         const escapeHTML = (str) => {
             const div = document.createElement('div');
@@ -175,9 +182,15 @@
 
         const sanitize = (str, maxLen = 100) => {
             if (typeof str !== 'string') return '';
-            let s = str.trim();
-            s = s.replace(/<[^>]*>?/gm, ''); // Elimina etiquetas HTML
+            let s = str.trim().replace(/<[^>]*>?/gm, ''); 
             return s.substring(0, maxLen);
+        };
+
+        // El Traductor de comas venezolanas a puntos de Javascript
+        const parseVE = (val) => {
+            if(typeof val === 'number') return val;
+            if(!val) return 0;
+            return parseFloat(val.toString().replace(',', '.')) || 0;
         };
         // ==========================================
 
@@ -212,13 +225,25 @@
             const selectProd = document.getElementById('itemCat');
             const inputLibre = document.getElementById('itemNameLibre');
             const unitSelect = document.getElementById('itemUnit');
+            
             if (selectAisle === "🥬 Verduras y Frutas" || selectAisle === "🥩 Carnes y Pollos") { unitSelect.value = "kg"; } else { unitSelect.value = "und"; }
+            
             selectProd.innerHTML = '<option value="" disabled selected>📦 Selecciona un Producto...</option>';
             if (selectAisle === "OTRO_PASILLO") { selectProd.disabled = true; selectProd.style.display = "none"; inputLibre.style.display = "block"; inputLibre.value = ""; } 
             else { selectProd.disabled = false; selectProd.style.display = "block"; inputLibre.style.display = "none"; const productos = catalogoPorCategorias[selectAisle]; if(productos) productos.sort().forEach(p => selectProd.add(new Option(p, p))); let opt = new Option("✏️ Otro producto...", "OTRO"); opt.style.fontWeight = "bold"; selectProd.add(opt); }
         }
 
-        window.verificarTipoProducto = function() { const catSelect = document.getElementById('itemCat'); document.getElementById('itemNameLibre').style.display = catSelect.value === "OTRO" ? "block" : "none"; }
+        window.verificarTipoProducto = function() { 
+            const catSelect = document.getElementById('itemCat'); 
+            const unitSelect = document.getElementById('itemUnit');
+            document.getElementById('itemNameLibre').style.display = catSelect.value === "OTRO" ? "block" : "none"; 
+            
+            // LA MAGIA: Si el producto es "Huevos", cambia la unidad a "cartón"
+            if (catSelect.value === "Huevos") {
+                unitSelect.value = "cartón";
+            }
+        }
+        
         window.verificarMarca = function() { document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none"; }
 
         window.guardarLocal = function() {
@@ -232,8 +257,12 @@
         window.cargarLocal = function() {
             if(localStorage.getItem('mercadoVE_carrito_v2')) { carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2')); window.renderCarrito(); }
             if(localStorage.getItem('mercadoVE_lista_id')) { listaActualId = localStorage.getItem('mercadoVE_lista_id'); listaActualNombre = localStorage.getItem('mercadoVE_lista_nombre'); }
-            if(localStorage.getItem('mercadoVE_tasaBinance')) document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance');
-            if(localStorage.getItem('mercadoVE_tasaGuardada')) { document.getElementById('tasaBCVInput').value = localStorage.getItem('mercadoVE_tasaGuardada'); tasaActual = parseFloat(localStorage.getItem('mercadoVE_tasaGuardada')); }
+            if(localStorage.getItem('mercadoVE_tasaBinance')) document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance').replace('.', ',');
+            if(localStorage.getItem('mercadoVE_tasaGuardada')) { 
+                let savedTasa = localStorage.getItem('mercadoVE_tasaGuardada');
+                document.getElementById('tasaBCVInput').value = savedTasa.replace('.', ','); 
+                tasaActual = parseFloat(savedTasa); 
+            }
         }
 
         window.vaciarLista = function(sinPreguntar = false) {
@@ -246,8 +275,12 @@
                 const itemTotal = item.price * item.qty; tempTotal += itemTotal;
                 const li = document.createElement('li'); li.className = "calc-item";
                 let unitStr = item.unit ? item.unit : "und";
+                
+                // Formateamos la cantidad para que se vea con coma si tiene decimales
+                let displayQty = item.qty.toString().replace('.', ',');
+                
                 const priceDisplay = item.price > 0 ? `<span class="item-price">$${itemTotal.toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`;
-                li.innerHTML = `<div style="display:flex; flex-direction:column;"><span class="item-title">${item.qty} <span style="color:var(--text-muted); font-size:12px; font-weight:normal;">${unitStr}</span> ${item.name}</span><span class="item-store text-muted">📍 ${item.store}</span></div><div style="display:flex; align-items:center;">${priceDisplay}<button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;">✏️</button><button class="btn-delete" onclick="window.deleteItem(${item.id})">✕</button></div>`;
+                li.innerHTML = `<div style="display:flex; flex-direction:column;"><span class="item-title">${displayQty} <span style="color:var(--text-muted); font-size:12px; font-weight:normal;">${unitStr}</span> ${item.name}</span><span class="item-store text-muted">📍 ${item.store}</span></div><div style="display:flex; align-items:center;">${priceDisplay}<button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;">✏️</button><button class="btn-delete" onclick="window.deleteItem(${item.id})">✕</button></div>`;
                 list.appendChild(li);
             });
             totalUSD = tempTotal; window.updateTotals();
@@ -259,10 +292,14 @@
             const libre = document.getElementById('itemNameLibre').value;
             const bCat = document.getElementById('itemBrand').value; 
             const bLibre = document.getElementById('itemBrandLibre').value;
-            const qty = parseFloat(document.getElementById('itemQty').value)||1; 
+            
+            // USAMOS parseVE PARA LEER EL INPUT (Permite 0,5 o 0.5 indistintamente)
+            const qtyStr = document.getElementById('itemQty').value;
+            const qty = qtyStr !== "" ? parseVE(qtyStr) : 1; 
             const unit = document.getElementById('itemUnit').value;
+            
             const priceStr = document.getElementById('itemPrice').value;
-            const price = priceStr !== "" ? parseFloat(priceStr) : 0;
+            const price = priceStr !== "" ? parseVE(priceStr) : 0;
             const store = document.getElementById('storeName').value;
 
             if(!aisle) return alert("Selecciona un pasillo.");
@@ -290,10 +327,11 @@
         window.editPrice = async function(id) {
             let item = carrito.find(i => i.id === id);
             if(!item) return;
-            let prevPrice = item.price > 0 ? item.price : '';
+            // Preparamos el precio anterior para que se vea con coma en el prompt si aplica
+            let prevPrice = item.price > 0 ? item.price.toString().replace('.', ',') : '';
             let newPriceStr = prompt(`Precio unitario (x 1 ${item.unit || 'und'}) en $ para:\n${item.name}`, prevPrice);
             if(newPriceStr !== null) {
-                let newPrice = parseFloat(newPriceStr);
+                let newPrice = parseVE(newPriceStr); // Transforma la coma en punto
                 if(!isNaN(newPrice) && newPrice >= 0) {
                     item.price = newPrice; window.renderCarrito(); window.guardarLocal();
                     if(item.isCommunity && newPrice > 0 && prevPrice === '') {
@@ -308,7 +346,12 @@
         window.updateTotals = function() {
             document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
             const tVES = totalUSD * tasaActual; document.getElementById('totalVES').textContent = tVES.toFixed(2);
-            const tb = parseFloat(document.getElementById('tasaBinanceInput').value); const txt = document.getElementById('ahorroText');
+            
+            // Leer la tasa con soporte para coma
+            const tbStr = document.getElementById('tasaBinanceInput').value;
+            const tb = tbStr !== "" ? parseVE(tbStr) : 0; 
+            
+            const txt = document.getElementById('ahorroText');
             if(tb>0 && tVES>0) { const tUSDT = tVES / tb; document.getElementById('totalUSDT').textContent = tUSDT.toFixed(2); const a = totalUSD - tUSDT; if(a>0) { txt.textContent = `💰 Ahorraste $${a.toFixed(2)}`; txt.className = "ahorro-text text-green"; } else if(a<0) { txt.textContent = `⚠️ Pierdes $${Math.abs(a).toFixed(2)}`; txt.className = "ahorro-text text-red"; } else { txt.textContent = "Sin diferencia cambiaria."; txt.className = "ahorro-text text-muted"; } } 
             else { document.getElementById('totalUSDT').textContent = "0.00"; txt.textContent = ""; }
         }
@@ -317,7 +360,9 @@
             if(!currentUser) return alert("Inicia sesión primero.");
             if(carrito.length === 0) return alert("Lista vacía.");
             if(carrito.some(i => i.price === 0)) if(!confirm("Tienes productos con precio 'Pendiente'. ¿Seguro que quieres guardar la lista así?")) return;
-            const tasaB = parseFloat(document.getElementById('tasaBinanceInput').value) || 0;
+            
+            const tbStr = document.getElementById('tasaBinanceInput').value;
+            const tasaB = tbStr !== "" ? parseVE(tbStr) : 0; 
             const totVES = totalUSD * tasaActual; const totUSDT = tasaB > 0 ? (totVES / tasaB) : 0; const ahorro = totalUSD - totUSDT;
 
             let dataToSave = { fecha: new Date().toLocaleDateString(), timestamp: new Date(), items_array: carrito, total: totalUSD, tasaBCV_guardada: tasaActual, tasaBinance_guardada: tasaB, totalVES_guardado: totVES, totalUSDT_guardado: totUSDT, ahorro_guardado: ahorro };
@@ -352,22 +397,23 @@
             hl.innerHTML = '';
             historialNube.forEach(compra => {
                 const div = document.createElement('div'); div.className = 'historial-card';
-                let ahorroH = (compra.ahorro_guardado && compra.tasaBinance_guardada > 0) ? (compra.ahorro_guardado > 0 ? `<p class="text-green" style="font-weight:600; margin-top:8px;">💰 Ahorro: $${compra.ahorro_guardado.toFixed(2)}</p>` : `<p class="text-red" style="font-weight:600; margin-top:8px;">⚠️ Pierda: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`) : "";
+                let ahorroH = (compra.ahorro_guardado && compra.tasaBinance_guardada > 0) ? (compra.ahorro_guardado > 0 ? `<p class="text-green" style="font-weight:600; margin-top:8px;">💰 Ahorro: $${compra.ahorro_guardado.toFixed(2)}</p>` : `<p class="text-red" style="font-weight:600; margin-top:8px;">⚠️ Pierde: $${Math.abs(compra.ahorro_guardado).toFixed(2)}</p>`) : "";
                 let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : '';
                 let safeListHTML = "";
                 if (compra.items_array) {
                     compra.items_array.forEach(item => {
                         const sName = escapeHTML(item.name); const sStore = escapeHTML(item.store); const sUnit = escapeHTML(item.unit || "und");
-                        safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${item.qty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`;
+                        let displayQty = item.qty.toString().replace('.', ',');
+                        safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${displayQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`;
                     });
                 } else { safeListHTML = `<p class="text-muted" style="font-size: 12px;">⚠️ Formato antiguo.</p>`; }
-                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div class="historial-snapshot"><p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p><p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2) || "0.00"} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2) || "0.00"}</p><hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;"><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${(compra.total || 0).toFixed(2)}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2) || "0.00"}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2) || "0.00"}</b></div>${ahorroH}</div><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`;
+                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div class="historial-snapshot"><p style="margin:0 0 8px 0; font-weight:600;">Resumen Financiero</p><p style="margin:2px 0; font-size:12px;" class="text-muted">BCV: Bs ${compra.tasaBCV_guardada?.toFixed(2).replace('.', ',') || "0,00"} | Venta USD: Bs ${compra.tasaBinance_guardada?.toFixed(2).replace('.', ',') || "0,00"}</p><hr style="border:0; border-top:1px solid var(--border-color); margin:10px 0;"><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Costo Real:</span> <b>$${(compra.total || 0).toFixed(2)}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>Pago Caja:</span> <b>Bs ${compra.totalVES_guardado?.toFixed(2).replace('.', ',') || "0,00"}</b></div><div style="display:flex; justify-content:space-between; margin:4px 0;"><span>USD a Vender:</span> <b>${compra.totalUSDT_guardado?.toFixed(2).replace('.', ',') || "0,00"}</b></div>${ahorroH}</div><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`;
                 hl.appendChild(div);
             });
         }
 
         window.toggleHistorial = function(id) { const d = document.getElementById(`detalles-${id}`); d.style.display = (d.style.display === "none" || d.style.display === "") ? "block" : "none"; }
-        window.cargarA_Calculadora = function(id) { if (carrito.length > 0) if (!confirm("¿Reemplazar calculadora actual?")) return; let compra = historialNube.find(c => c.id === id); if (compra && compra.items_array) { carrito = compra.items_array; if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual; } if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada; } listaActualId = id; listaActualNombre = compra.nombre; window.renderCarrito(); window.guardarLocal(); window.switchTab('lista'); } }
+        window.cargarA_Calculadora = function(id) { if (carrito.length > 0) if (!confirm("¿Reemplazar calculadora actual?")) return; let compra = historialNube.find(c => c.id === id); if (compra && compra.items_array) { carrito = compra.items_array; if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual.toString().replace('.', ','); } if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada.toString().replace('.', ','); } listaActualId = id; listaActualNombre = compra.nombre; window.renderCarrito(); window.guardarLocal(); window.switchTab('lista'); } }
         window.borrarHistorialNube = async function(id) { if(!currentUser) return; if(confirm("¿Eliminar para siempre?")) { try { await deleteDoc(doc(db, `usuarios/${currentUser.uid}/historial`, id)); window.cargarHistorialNube(); } catch(e) { alert("Error."); } } }
 
         window.loadCommunity = async function() {
@@ -401,13 +447,19 @@
             try {
                 const res = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar'); const data = await res.json();
                 const inBcv = document.getElementById('tasaBCVInput'); const inBin = document.getElementById('tasaBinanceInput');
-                if(!inBcv.value || inBcv.value==="0") inBcv.value = data.monitors.bcv.price.toFixed(2);
-                if(!inBin.value || inBin.value==="0") inBin.value = data.monitors.binance.price.toFixed(2);
-                tasaActual = parseFloat(inBcv.value); window.guardarLocal(); window.updateTotals();
+                if(!inBcv.value || inBcv.value==="0" || inBcv.value==="") inBcv.value = data.monitors.bcv.price.toFixed(2).replace('.', ',');
+                if(!inBin.value || inBin.value==="0" || inBin.value==="") inBin.value = data.monitors.binance.price.toFixed(2).replace('.', ',');
+                tasaActual = parseFloat(data.monitors.bcv.price); window.guardarLocal(); window.updateTotals();
             } catch (e) { window.cargarLocal(); window.updateTotals(); }
         }
 
-        window.updateRatesManual = function() { const v = parseFloat(document.getElementById('tasaBCVInput').value); if(v>0) tasaActual=v; window.updateTotals(); window.guardarLocal(); }
+        window.updateRatesManual = function() { 
+            const val = document.getElementById('tasaBCVInput').value;
+            const v = parseVE(val); 
+            if(v>0) tasaActual=v; 
+            window.updateTotals(); window.guardarLocal(); 
+        }
+        
         window.inicializarCatalogos(); window.cargarLocal(); window.fetchRates();
     </script>
 </body>
