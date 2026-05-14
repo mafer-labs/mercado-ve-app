@@ -3,151 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CuentaClara - Tu mercado al mejor cambio</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>CuentaClara</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        body { overflow-x: hidden; } 
-        .qty-unit-box { display: flex; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); flex: 1 1 45%; }
-        .qty-input { width: 50%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
-        .qty-input:focus { outline: none; }
-        .unit-select { width: 50%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
-        .unit-select:focus { outline: none; }
-        #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
-        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
-        @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
-        
-        .premium-btn { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(245,158,11,0.3); }
-        .paywall-box { background: var(--bg-rates); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 15px; text-align: left; }
-        .paywall-input { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-family: 'Inter', sans-serif; font-size: 14px; margin-top: 8px; background: var(--bg-input); color: var(--text-main); box-sizing: border-box; }
-        .locked-btn { background: var(--bg-rates); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .admin-card { background: var(--bg-input); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 10px; font-size: 13px; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div id="ptr"><span id="ptr-icon">⬇️</span> <span id="ptr-text">Desliza para actualizar...</span></div>
-    <div id="toast">✅ Acción exitosa</div>
-
-    <div id="premium-modal" class="modal-overlay">
-        <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
-            <div style="text-align: center;">
-                <span style="font-size: 40px;">👑</span>
-                <h3 style="color: #f59e0b; font-size: 22px; margin-top: 5px;">Sube a Premium</h3>
-                <p class="text-muted" style="font-size: 13px;">Desbloquea todo el poder de CuentaClara.</p>
-            </div>
-            <ul style="font-size: 13px; margin: 15px 0; padding-left: 20px; color: var(--text-main);">
-                <li>✅ <b>Multi-Listas Nube:</b> Guarda listas ilimitadas.</li>
-                <li>✅ <b>Sincronización Comunitaria:</b> Agrega con 1 toque.</li>
-            </ul>
-            <div class="paywall-box">
-                <h4 style="margin:0 0 10px 0; font-size: 14px;">1️⃣ Realiza tu pago ($1.50):</h4>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
-                    <span class="text-muted">Pago Móvil:</span>
-                    <b>0424-2858035 • Banesco • 25.443.679</b>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                    <span class="text-muted">Zelle:</span>
-                    <b>pagos@cuentaclara.app</b>
-                </div>
-            </div>
-            <div class="paywall-box" style="margin-top: 10px;">
-                <h4 style="margin:0 0 10px 0; font-size: 14px;">2️⃣ Reporta tu pago:</h4>
-                <input type="text" id="pay-ref" class="paywall-input" placeholder="Referencia o Nombre">
-                <button onclick="window.reportarPago()" class="btn-main" style="margin-top:10px; background: #f59e0b; color: #fff;" id="btn-enviar-pago">Enviar Reporte 🚀</button>
-            </div>
-            <button onclick="document.getElementById('premium-modal').style.display='none'" style="width:100%; margin-top:15px; padding:10px; background:transparent; border:none; color:var(--text-muted); font-weight:600;">Quizás más tarde</button>
-        </div>
-    </div>
-
-    <div id="admin-modal" class="modal-overlay">
-        <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
-            <h3 style="color: var(--primary-green); border-bottom: 2px solid var(--primary-green); padding-bottom: 10px;">Panel Admin 🛠️</h3>
-            <div id="admin-list" style="margin-top: 20px;"><p class="text-muted">Buscando reportes...</p></div>
-            <button onclick="document.getElementById('admin-modal').style.display='none'" class="btn-main" style="margin-top:20px;">Cerrar</button>
-        </div>
-    </div>
-
-    <div id="login-screen">
-        <h1 style="font-size: 36px; color: var(--primary-green); margin-bottom: 10px; font-weight: 800;">CuentaClara</h1>
-        <button class="login-btn" onclick="window.loginConGoogle()">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 24px;">
-            Continuar con Google
+    <div id="login-screen" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh;">
+        <h1 style="color: #22c55e; font-size: 32px; font-weight: 800;">CuentaClara</h1>
+        <button onclick="window.loginConGoogle()" style="padding: 12px 24px; background: white; border: 1px solid #ddd; border-radius: 8px; display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600;">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20">
+            Entrar con Google
         </button>
     </div>
 
-    <div class="container">
-        <div class="header-top">
-            <h1 id="app-logo" onclick="window.handleAdminClick()" style="cursor: pointer;"><span style="color: var(--primary-green);">Cuenta</span>Clara</h1>
-            <div class="user-controls" id="user-controls" style="display:none;">
-                <button id="btn-go-premium" onclick="window.showPremiumModal()" class="premium-btn" style="display:none;">👑 Premium</button>
-                <button onclick="window.logout()" class="btn-icon" style="color: var(--danger-red);">Salir</button>
+    <div id="main-content" style="display: none;">
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+                <h1 style="font-size: 20px;">CuentaClara</h1>
+                <button onclick="window.logout()" style="color: #ef4444; background: none; border: none; font-weight: 600;">Cerrar sesión</button>
             </div>
-        </div>
-        
-        <div class="rates-box">
-            <div class="rate-row">
-                <span class="rate-label text-blue">🇻🇪 Tasa BCV ✏️</span>
-                <input type="text" id="tasaBCVInput" class="rate-input text-blue" placeholder="36,50" oninput="window.updateRatesManual()">
-            </div>
-            <div class="rate-row">
-                <span class="rate-label text-green">🔄 Venta USD ✏️</span>
-                <input type="text" id="tasaBinanceInput" class="rate-input text-green" placeholder="41,50" oninput="window.updateRatesManual()">
-            </div>
-        </div>
 
-        <div id="tab-lista" class="tab-content active">
+            <div class="rates-box">
+                <input type="number" id="tasaBCVInput" placeholder="Tasa BCV" oninput="window.calcular()">
+                <input type="number" id="tasaBinanceInput" placeholder="Tasa USD" oninput="window.calcular()">
+            </div>
+
             <div class="input-group">
-                <datalist id="cat-supermercados"></datalist>
-                <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()"><option value="" disabled selected>🏪 Pasillo...</option></select>
-                <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled><option value="" disabled selected>📦 Producto...</option></select>
-                <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto..." style="display:none;">
-                <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()"></select>
-                <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Marca..." style="display:none;">
-                <div style="display: flex; gap: 8px; width: 100%;">
-                    <div class="qty-unit-box">
-                        <input type="text" id="itemQty" class="qty-input" value="1">
-                        <select id="itemUnit" class="unit-select">
-                            <option value="und">und</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="cartón">cartón</option>
-                        </select>
-                    </div>
-                    <input type="text" id="itemPrice" class="input-base" placeholder="Precio $" style="flex: 1;">
-                </div>
-                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
-                <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
+                <input type="text" id="itemName" placeholder="Producto...">
+                <input type="number" id="itemPrice" placeholder="Precio $">
+                <button class="btn-main" onclick="window.addItem()">Agregar</button>
             </div>
-            <ul id="list"></ul>
-            <div class="total-box">
-                <p>USD: <b>$<span id="totalUSD">0.00</span></b></p>
-                <h4>Total Bs: <span id="totalVES">0.00</span></h4>
-                <p id="ahorroText" class="ahorro-text"></p>
-            </div>
-            <div class="action-btns">
-                <button class="btn-secondary blue" onclick="window.guardarHistorialNube()">☁️ Guardar</button>
-                <button class="btn-secondary" onclick="window.vaciarLista()">🗑️ Vaciar</button>
-            </div>
-        </div>
 
-        <div id="tab-precios" class="tab-content">
-            <input type="text" id="searchCommunity" class="input-base input-full" placeholder="🔍 Buscar..." oninput="window.filterCommunity()">
-            <div id="precios-list"></div>
-        </div>
-        <div id="tab-historial" class="tab-content"><div id="historial-list"></div></div>
-    </div>
+            <ul id="list" style="margin-top: 20px;"></ul>
 
-    <div class="bottom-nav">
-        <button class="nav-item active" id="btn-lista" onclick="window.switchTab('lista')">📝 Lista</button>
-        <button class="nav-item" id="btn-precios" onclick="window.switchTab('precios')">🔍 Explorar</button>
-        <button class="nav-item" id="btn-historial" onclick="window.switchTab('historial')">📚 Historial</button>
+            <div class="total-box" style="margin-top: 20px; padding: 15px; background: #f0fdf4; border-radius: 12px;">
+                <p>Total USD: <b>$<span id="totalUSD">0.00</span></b></p>
+                <h2 style="color: #166534;">Total Bs: <span id="totalVES">0.00</span></h2>
+            </div>
+            
+            <button class="btn-secondary" onclick="window.vaciar()" style="width: 100%; margin-top: 10px;">Vaciar Lista</button>
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-        import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=9";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -160,169 +60,52 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
         const provider = new GoogleAuthProvider();
 
-        let currentUser = null; let userPlan = "gratis"; let carrito = []; let totalUSD = 0; let tasaActual = 0;
-        let historialNube = []; let adminClicks = 0; let listaActualId = null;
+        let carrito = [];
 
-        const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
-        const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
-        const escapeHTML = (str) => { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; };
-
-        // LOGIN REDIRECT
-        window.loginConGoogle = async () => {
-            await setPersistence(auth, browserLocalPersistence);
-            signInWithRedirect(auth, provider);
+        // Auth
+        window.loginConGoogle = () => {
+            signInWithPopup(auth, provider).catch(err => alert("Error: " + err.message));
         };
 
-        getRedirectResult(auth).catch(e => console.error("Error redirect:", e));
+        window.logout = () => signOut(auth);
 
-        onAuthStateChanged(auth, async (user) => {
-            const loginScr = document.getElementById('login-screen');
-            const userCtr = document.getElementById('user-controls');
-            if (user) {
-                currentUser = user;
-                loginScr.style.display = 'none';
-                userCtr.style.display = 'flex';
-                const userSnap = await getDoc(doc(db, "usuarios", user.uid));
-                if (userSnap.exists()) { userPlan = userSnap.data().plan || "gratis"; }
-                else { await setDoc(doc(db, "usuarios", user.uid), { email: user.email, plan: "gratis", fecha: new Date() }); }
-                document.getElementById('btn-go-premium').style.display = (userPlan === "gratis") ? 'flex' : 'none';
-                window.cargarHistorialNube();
-            } else {
-                loginScr.style.display = 'flex';
-                userCtr.style.display = 'none';
-            }
+        onAuthStateChanged(auth, (user) => {
+            document.getElementById('login-screen').style.display = user ? 'none' : 'flex';
+            document.getElementById('main-content').style.display = user ? 'block' : 'none';
         });
 
-        // ADMIN LOGIC
-        window.handleAdminClick = () => {
-            if (currentUser && currentUser.email === 'mariac.assistant@gmail.com') {
-                adminClicks++; if (adminClicks >= 5) { adminClicks = 0; document.getElementById('admin-modal').style.display = 'flex'; window.loadAdminPayments(); }
-            }
-        };
-
-        window.loadAdminPayments = async () => {
-            const listEl = document.getElementById('admin-list');
-            const q = query(collection(db, "pagos_pendientes"), where("estado", "==", "pendiente"));
-            const snap = await getDocs(q);
-            listEl.innerHTML = snap.empty ? 'Sin pagos.' : '';
-            snap.forEach(d => {
-                const pay = d.data();
-                listEl.innerHTML += `<div class="admin-card">${pay.email}<br>Ref: ${pay.referencia}<br><button onclick="window.approvePayment('${d.id}','${pay.uid}')" style="background:var(--primary-green);color:white;border:none;padding:5px;border-radius:5px;width:100%;margin-top:5px;">Aprobar</button></div>`;
-            });
-        };
-
-        window.approvePayment = async (pId, uId) => {
-            await updateDoc(doc(db, "usuarios", uId), { plan: "premium" });
-            await updateDoc(doc(db, "pagos_pendientes", pId), { estado: "completado" });
-            alert("¡Activado!"); window.loadAdminPayments();
-        };
-
-        window.logout = () => signOut(auth).then(() => location.reload());
-        window.showPremiumModal = () => document.getElementById('premium-modal').style.display = 'flex';
-
-        window.reportarPago = async () => {
-            const ref = document.getElementById('pay-ref').value;
-            if(!ref) return;
-            await addDoc(collection(db, "pagos_pendientes"), { uid: currentUser.uid, email: currentUser.email, referencia: ref, estado: "pendiente", fecha: new Date() });
-            alert("Reporte enviado"); document.getElementById('premium-modal').style.display='none';
-        };
-
-        // CALCULATOR LOGIC
+        // Lógica simple
         window.addItem = () => {
-            const aisle = document.getElementById('itemAisle').value;
-            const cat = document.getElementById('itemCat').value;
-            const price = parseVE(document.getElementById('itemPrice').value);
-            const qty = parseVE(document.getElementById('itemQty').value);
-            const store = document.getElementById('storeName').value || "N/A";
-            if(qty > 0) {
-                const name = (aisle === "OTRO_PASILLO" || cat === "OTRO") ? document.getElementById('itemNameLibre').value : cat;
-                carrito.push({ id: Date.now(), name, price, qty, store });
-                window.renderCarrito();
+            const name = document.getElementById('itemName').value;
+            const price = parseFloat(document.getElementById('itemPrice').value) || 0;
+            if(price > 0) {
+                carrito.push({ name, price });
+                window.render();
+                document.getElementById('itemName').value = '';
                 document.getElementById('itemPrice').value = '';
             }
         };
 
-        window.renderCarrito = () => {
-            const l = document.getElementById('list'); l.innerHTML = ''; totalUSD = 0;
-            carrito.forEach(i => {
-                const sub = i.price * i.qty; totalUSD += sub;
-                l.innerHTML += `<li class="calc-item">${i.qty} ${i.name} - $${sub.toFixed(2)}</li>`;
+        window.render = () => {
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            let total = 0;
+            carrito.forEach((item, index) => {
+                total += item.price;
+                list.innerHTML += `<li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <span>${item.name || 'Producto'}</span>
+                    <b>$${item.price.toFixed(2)}</b>
+                </li>`;
             });
-            document.getElementById('totalUSD').innerText = totalUSD.toFixed(2);
-            document.getElementById('totalVES').innerText = (totalUSD * tasaActual).toFixed(2);
+            const tasa = parseFloat(document.getElementById('tasaBCVInput').value) || 0;
+            document.getElementById('totalUSD').innerText = total.toFixed(2);
+            document.getElementById('totalVES').innerText = (total * tasa).toFixed(2);
         };
 
-        window.updateRatesManual = () => { tasaActual = parseVE(document.getElementById('tasaBCVInput').value); window.renderCarrito(); };
-
-        window.guardarHistorialNube = async () => {
-            if(userPlan === "gratis" && historialNube.length >= 1) return window.showPremiumModal();
-            const n = prompt("Nombre de la compra:");
-            if(n) {
-                await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), { nombre: n, items_array: carrito, total: totalUSD, fecha: new Date().toLocaleDateString(), timestamp: new Date() });
-                alert("Guardado"); window.cargarHistorialNube();
-            }
-        };
-
-        window.cargarHistorialNube = async () => {
-            const q = query(collection(db, `usuarios/${currentUser.uid}/historial`));
-            const snap = await getDocs(q);
-            historialNube = []; snap.forEach(d => historialNube.push(d.data()));
-            const hl = document.getElementById('historial-list'); hl.innerHTML = '';
-            historialNube.forEach(h => { hl.innerHTML += `<div class="historial-card"><b>${h.nombre}</b><br>$${h.total.toFixed(2)} - ${h.fecha}</div>`; });
-        };
-
-        window.switchTab = (t) => {
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById(`tab-${t}`).classList.add('active');
-            document.getElementById(`btn-${t}`).classList.add('active');
-            if(t === 'precios') window.loadCommunity();
-        };
-
-        window.loadCommunity = async () => {
-            const s = await getDocs(collection(db, "productos_comunidad"));
-            const l = document.getElementById('precios-list'); l.innerHTML = '';
-            s.forEach(d => { 
-                const p = d.data(); 
-                let btn = (userPlan === 'gratis') ? '🔒' : '➕';
-                l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee;">${p.producto} - $${p.precioUSD} ${btn}</div>`; 
-            });
-        };
-
-        window.inicializarCatalogos = () => {
-            const sA = document.getElementById('itemAisle');
-            Object.keys(catalogoPorCategorias).forEach(c => sA.add(new Option(c, c)));
-            sA.add(new Option("Otro...", "OTRO_PASILLO"));
-            const sB = document.getElementById('itemBrand');
-            sB.add(new Option("Sin Marca", "Sin Marca"));
-            marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => sB.add(new Option(m, m)));
-            sB.add(new Option("Otra...", "OTRA"));
-            supermercadosFijos.forEach(s => document.getElementById('cat-supermercados').innerHTML += `<option value="${s}">`);
-        };
-
-        window.cargarProductosPorCategoria = () => {
-            const aisle = document.getElementById('itemAisle').value;
-            const sP = document.getElementById('itemCat'); sP.innerHTML = '';
-            if(aisle === "OTRO_PASILLO") { sP.style.display="none"; document.getElementById('itemNameLibre').style.display="block"; }
-            else { sP.disabled=false; sP.style.display="block"; document.getElementById('itemNameLibre').style.display="none"; (catalogoPorCategorias[aisle] || []).forEach(p => sP.add(new Option(p, p))); sP.add(new Option("Otro...", "OTRO")); }
-        };
-
-        window.verificarTipoProducto = () => { document.getElementById('itemNameLibre').style.display = document.getElementById('itemCat').value === "OTRO" ? "block" : "none"; };
-        window.verificarMarca = () => { document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none"; };
-        window.vaciarLista = () => { if(confirm("¿Vaciar?")) { carrito = []; window.renderCarrito(); } };
-
-        window.inicializarCatalogos();
-    </script>
-
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW error', e));
-        });
-      }
+        window.calcular = () => window.render();
+        window.vaciar = () => { carrito = []; window.render(); };
     </script>
 </body>
 </html>
