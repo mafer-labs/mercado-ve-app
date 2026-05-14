@@ -55,7 +55,7 @@
             
             <ul style="font-size: 13px; margin: 15px 0; padding-left: 20px; color: var(--text-main);">
                 <li>✅ <b>Multi-Listas Nube:</b> Guarda listas ilimitadas.</li>
-                <li>✅ <b>Robo de Precios:</b> Agrega con 1 toque desde la comunidad (Adiós al candadito 🔒).</li>
+                <li>✅ <b>Importación Directa:</b> Agrega con 1 toque desde la comunidad (Adiós al candadito 🔒).</li>
                 <li>✅ <b>Sin anuncios futuros.</b></li>
             </ul>
 
@@ -75,7 +75,7 @@
             <div class="paywall-box" style="margin-top: 10px;">
                 <h4 style="margin:0 0 10px 0; font-size: 14px;">2️⃣ Reporta tu pago:</h4>
                 <input type="text" id="pay-ref" class="paywall-input" placeholder="Ej: Últimos 4 dígitos o Nombre (Zelle)">
-                <button onclick="window.reportarPago()" class="btn-main" style="margin-top:10px; background: #f59e0b; color: #fff;">Enviar Reporte 🚀</button>
+                <button onclick="window.reportarPago()" class="btn-main" style="margin-top:10px; background: #f59e0b; color: #fff;" id="btn-enviar-pago">Enviar Reporte 🚀</button>
             </div>
 
             <button onclick="document.getElementById('premium-modal').style.display='none'" style="width:100%; margin-top:15px; padding:10px; background:transparent; border:none; color:var(--text-muted); font-weight:600;">Quizás más tarde</button>
@@ -96,8 +96,7 @@
         <div class="header-top">
             <h1><span style="color: var(--primary-green);">Cuenta</span>Clara</h1>
             <div class="user-controls" id="user-controls">
-                <!-- Botón Premium (Solo se mostrará a usuarios gratis) -->
-                <button id="btn-go-premium" onclick="window.showPremiumModal()" class="premium-btn">👑 Premium</button>
+                <button id="btn-go-premium" onclick="window.showPremiumModal()" class="premium-btn" style="display:none;">👑 Premium</button>
                 <button onclick="document.getElementById('help-modal').style.display='flex'" class="btn-icon">ℹ️</button>
                 <button onclick="window.logout()" class="btn-icon" style="color: var(--danger-red);">Salir</button>
             </div>
@@ -181,8 +180,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=5";
+        // Añadimos getDoc y setDoc para gestionar perfiles
+        import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=6";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -201,8 +201,7 @@
         
         let currentUser = null; let historialNube = []; let carrito = []; let totalUSD = 0; let tasaActual = 0; let listaActualId = null; let listaActualNombre = "";
 
-        // ESTADO DE SUSCRIPCIÓN (Mockup temporal)
-        // Valores posibles: "gratis", "beta", "premium"
+        // Variable global que ahora se alimentará de la base de datos
         let userPlan = "gratis"; 
 
         const escapeHTML = (str) => { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; };
@@ -214,13 +213,34 @@
             document.getElementById('premium-modal').style.display = 'flex';
         }
         
-        window.reportarPago = function() {
-            const ref = document.getElementById('pay-ref').value;
+        window.reportarPago = async function() {
+            if(!currentUser) return alert("Por favor, inicia sesión.");
+            
+            const refInput = document.getElementById('pay-ref');
+            const ref = refInput.value.trim();
             if(!ref) return alert("Por favor, ingresa el número de referencia o nombre.");
-            // Aquí en la Fase 2 enviaremos esto a Firebase
-            document.getElementById('premium-modal').style.display = 'none';
-            document.getElementById('pay-ref').value = "";
-            mostrarToast("⏳ Reporte enviado. Te activaremos pronto.");
+            
+            const btn = document.getElementById('btn-enviar-pago');
+            btn.textContent = "Enviando..."; btn.disabled = true;
+
+            try {
+                // GUARDAMOS EL PAGO EN FIREBASE
+                await addDoc(collection(db, "pagos_pendientes"), {
+                    uid: currentUser.uid,
+                    email: currentUser.email,
+                    referencia: sanitize(ref, 30),
+                    fecha: new Date(),
+                    estado: "pendiente"
+                });
+                
+                document.getElementById('premium-modal').style.display = 'none';
+                refInput.value = "";
+                mostrarToast("⏳ Reporte enviado. Te activaremos pronto.");
+            } catch(e) {
+                alert("Error al enviar el reporte. Asegúrate de tener conexión.");
+            } finally {
+                btn.textContent = "Enviar Reporte 🚀"; btn.disabled = false;
+            }
         }
 
         function mostrarToast(msg) {
@@ -237,27 +257,58 @@
         document.addEventListener('touchmove', e => { if (!isPulling) return; pCurrent.y = e.touches[0].clientY; let diff = pCurrent.y - pStart.y; if (diff > 10 && window.scrollY === 0) { ptr.style.display = 'flex'; if (diff > 100) { ptrText.textContent = "Suelta para actualizar"; ptrIcon.textContent = "🔄"; } else { ptrText.textContent = "Desliza para actualizar..."; ptrIcon.textContent = "⬇️"; } } }, {passive: true});
         document.addEventListener('touchend', e => { if (!isPulling) return; isPulling = false; let diff = pCurrent.y - pStart.y; if (diff > 100 && window.scrollY === 0) { ptrText.textContent = "Actualizando..."; ptrIcon.textContent = "⏳"; setTimeout(() => { location.reload(); }, 300); } else { ptr.style.display = 'none'; } });
 
-        onAuthStateChanged(auth, (user) => { 
+        // === CEREBRO: CONEXIÓN DE PERFILES DE USUARIO ===
+        onAuthStateChanged(auth, async (user) => { 
             if (user) { 
                 currentUser = user; 
                 document.getElementById('login-screen').style.display = 'none'; 
                 document.getElementById('user-controls').style.display = 'flex'; 
                 
-                // Lógica UI según plan
-                if(userPlan !== "gratis") {
-                    document.getElementById('btn-go-premium').style.display = 'none';
+                // 1. Buscamos el perfil del usuario en la base de datos
+                const userRef = doc(db, "usuarios", user.uid);
+                try {
+                    const userSnap = await getDoc(userRef);
+                    if (userSnap.exists()) {
+                        userPlan = userSnap.data().plan || "gratis";
+                    } else {
+                        // 2. Si no existe, le creamos su perfil gratis
+                        await setDoc(userRef, { 
+                            email: user.email, 
+                            plan: "gratis", 
+                            fecha_registro: new Date() 
+                        });
+                        userPlan = "gratis";
+                    }
+                } catch(e) {
+                    console.warn("No se pudo cargar el perfil:", e);
+                    userPlan = "gratis"; // Modo seguro por defecto
+                }
+                
+                // 3. Ajustamos la interfaz según su plan
+                const btnPremium = document.getElementById('btn-go-premium');
+                if(userPlan === "gratis") {
+                    btnPremium.style.display = 'flex';
+                } else {
+                    btnPremium.style.display = 'none'; // Si es Beta o Premium, ocultamos el botón de cobro
                 }
 
                 window.cargarHistorialNube(); 
+                
+                // Si la pestaña de explorar está abierta, recargamos para quitar los candados
+                if(document.getElementById('tab-precios').classList.contains('active')) {
+                    window.loadCommunity();
+                }
+
             } else { 
-                currentUser = null; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-controls').style.display = 'none'; 
+                currentUser = null; 
+                document.getElementById('login-screen').style.display = 'flex'; 
+                document.getElementById('user-controls').style.display = 'none'; 
             } 
         });
 
         window.loginConGoogle = function() { signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message)); }
         window.logout = function() { signOut(auth); }
 
-        // === EL FIX DE "SIN MARCA" ===
         window.inicializarCatalogos = function() {
             const selectAisle = document.getElementById('itemAisle'); 
             Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat))); 
@@ -265,12 +316,9 @@
             optOtro.style.fontWeight = "bold"; 
             selectAisle.add(optOtro);
             
-            // Reordenamiento de Marcas
             const selectBrand = document.getElementById('itemBrand'); 
             selectBrand.add(new Option("Sin Marca", "Sin Marca"));
-            
             marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => selectBrand.add(new Option(m, m))); 
-            
             let optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; selectBrand.add(optB);
             
             const catSup = document.getElementById('cat-supermercados');
@@ -338,7 +386,7 @@
         window.guardarHistorialNube = async function() { 
             if(!currentUser) return alert("Inicia sesión primero."); 
             
-            // VERIFICACIÓN DEL PAYWALL PARA MULTI-LISTAS
+            // VERIFICACIÓN DEL PAYWALL
             if(userPlan === "gratis" && historialNube.length >= 1 && !listaActualId) {
                 window.showPremiumModal();
                 return;
@@ -364,7 +412,6 @@
             const listEl = document.getElementById('precios-list'); listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Cargando...</p>';
             try { const snapshot = await getDocs(query(collection(db, "productos_comunidad"))); let docs = []; snapshot.forEach(d => docs.push(d.data())); let agrupados = {}; docs.forEach(data => { let prod = data.producto; let sup = data.supermercado || "N/A"; let autor = data.reportadoPor || "Anónimo"; let uni = data.unidad || "und"; if(!agrupados[prod]) agrupados[prod] = {}; agrupados[prod][sup] = { p: data.precioUSD, a: autor, u: uni }; }); listEl.innerHTML = ''; const nombres = Object.keys(agrupados).sort(); if(nombres.length === 0) return listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Sin datos.</p>'; nombres.forEach(prod => { const div = document.createElement('div'); div.className = 'prod-group'; let html = `<div class="prod-header">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list">`; const tiendas = Object.keys(agrupados[prod]).sort((a,b) => agrupados[prod][a].p - agrupados[prod][b].p); tiendas.forEach((t, i) => { const info = agrupados[prod][t]; const pSafe = escapeHTML(prod).replace(/'/g, "\\'"); const tSafe = escapeHTML(t).replace(/'/g, "\\'"); const uSafe = escapeHTML(info.u).replace(/'/g, "\\'"); 
                 
-                // CONDICIÓN DEL PAYWALL EN EL BOTÓN
                 let actionBtn = "";
                 if(userPlan === "gratis") {
                     actionBtn = `<button onclick="window.showPremiumModal()" class="locked-btn">🔒</button>`;
