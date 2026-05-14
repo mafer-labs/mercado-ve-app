@@ -7,7 +7,7 @@ export const catalogoPorCategorias = {
         "Carne Molida", "Pollo Entero", "Pechuga de Pollo", "Bistec", "Chuleta de Cerdo"
     ],
     "🧀 Lácteos y Huevos": [
-        "Queso Blanco", "Queso Amarillo", "Leche en Polvo", "Leche Líquida", "Cartón de Huevos", "Mantequilla"
+        "Queso Blanco", "Queso Amarillo", "Leche en Polvo", "Leche Líquida", "Huevos", "Mantequilla"
     ],
     "🧼 Limpieza e Higiene": [
         "Detergente", "Jabón de Baño", "Papel Higiénico", "Crema Dental", "Desodorante", "Lavaplatos"
