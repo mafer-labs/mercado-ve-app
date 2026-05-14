@@ -19,15 +19,6 @@
         #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
         @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
-        
-        /* ESTILOS PARA EL NUEVO BUSCADOR DE GOOGLE V2 */
-        gmp-place-autocomplete { width: 100%; display: block; margin-bottom: 10px; }
-        gmp-place-autocomplete::part(input) { 
-            width: 100%; padding: 12px; border: 1px solid var(--border-color); 
-            border-radius: 8px; background: var(--bg-input); 
-            color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; 
-            box-sizing: border-box;
-        }
     </style>
 </head>
 <body>
@@ -40,7 +31,7 @@
             <ul>
                 <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco. Aparecerán como "Pendientes".</li>
                 <li><strong>Comunidad:</strong> Busca productos en Explorar y toca ➕ para llevarlos a tu calculadora.</li>
-                <li><strong>Ubicación:</strong> Al escribir el nombre del supermercado, Google te sugerirá la sede exacta.</li>
+                <li><strong>Ahorro de Datos:</strong> Esta app funciona casi toda sin internet. Solo necesita conexión para guardar en la nube o buscar precios comunitarios.</li>
             </ul>
             <button onclick="document.getElementById('help-modal').style.display='none'" class="btn-main" style="margin-top:20px;">¡Entendido!</button>
         </div>
@@ -82,6 +73,8 @@
 
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
+                <datalist id="cat-supermercados"></datalist>
+                
                 <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()" style="font-weight: 600;"><option value="" disabled selected>🏪 Selecciona un Pasillo...</option></select>
                 <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled><option value="" disabled selected>📦 Primero elige un pasillo...</option></select>
                 <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto personal..." style="display:none;">
@@ -98,8 +91,8 @@
                     <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" style="flex: 1 1 45%;">
                 </div>
                 
-                <!-- EL NUEVO COMPONENTE V2 DE GOOGLE MAPS -->
-                <gmp-place-autocomplete id="storeName" placeholder="📍 Busca la sede del supermercado..."></gmp-place-autocomplete>
+                <!-- DE VUELTA A LO LIGERO Y OFFLINE: El clásico input con datalist -->
+                <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
                 
                 <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
             </div>
@@ -137,15 +130,11 @@
         <button class="nav-item" id="btn-historial" onclick="window.switchTab('historial')"><span class="nav-icon">📚</span> Historial</button>
     </div>
 
-    <!-- EL NUEVO CARGADOR MODERNO DE GOOGLE MAPS (Async Loading) -->
-    <!-- REEMPLAZA TU_CLAVE_DE_API_AQUI POR TU CLAVE DE GOOGLE CLOUD -->
-    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM&loading=async&libraries=places"></script>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=3";
+        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=4";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
@@ -168,15 +157,6 @@
         const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
         const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
 
-        // Restringir Google Maps solo a Venezuela cuando el componente carga
-        document.addEventListener('DOMContentLoaded', () => {
-            const autocompleteEl = document.getElementById('storeName');
-            if(autocompleteEl) {
-                // Configuramos el componente para buscar solo establecimientos en VE
-                autocompleteEl.componentRestrictions = { country: ['ve'] };
-            }
-        });
-
         let pStart = { y: 0 }; let pCurrent = { y: 0 }; let isPulling = false;
         const ptr = document.getElementById('ptr'); const ptrText = document.getElementById('ptr-text'); const ptrIcon = document.getElementById('ptr-icon');
         document.addEventListener('touchstart', e => { if (window.scrollY === 0) { pStart.y = e.touches[0].clientY; isPulling = true; } }, {passive: true});
@@ -190,6 +170,10 @@
         window.inicializarCatalogos = function() {
             const selectAisle = document.getElementById('itemAisle'); Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat))); let optOtro = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); optOtro.style.fontWeight = "bold"; selectAisle.add(optOtro);
             const selectBrand = document.getElementById('itemBrand'); marcasOficiales.sort().forEach(m => selectBrand.add(new Option(m, m))); let optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; selectBrand.add(optB);
+            
+            const catSup = document.getElementById('cat-supermercados');
+            catSup.innerHTML = "";
+            supermercadosFijos.forEach(s => catSup.innerHTML += `<option value="${s}">`);
         }
 
         window.cargarProductosPorCategoria = function() {
@@ -232,9 +216,8 @@
             const qtyStr = document.getElementById('itemQty').value; const qty = qtyStr !== "" ? parseVE(qtyStr) : 1; const unit = document.getElementById('itemUnit').value;
             const priceStr = document.getElementById('itemPrice').value; const price = priceStr !== "" ? parseVE(priceStr) : 0; 
             
-            // Leemos el valor del nuevo componente de Google Maps
-            const storeInput = document.getElementById('storeName');
-            const store = storeInput && storeInput.inputValue ? storeInput.inputValue : "No especificado";
+            // Volvemos a leer el input nativo de HTML
+            const store = document.getElementById('storeName').value;
 
             if(!aisle) return alert("Selecciona un pasillo."); if(aisle !== "OTRO_PASILLO" && !cat) return alert("Selecciona un producto."); if(!bCat) return alert("Selecciona una marca.");
             let fBrand = bCat === "OTRA" ? sanitize(bLibre, 30) : (bCat !== "Sin Marca" ? bCat : ""); let fName = (aisle === "OTRO_PASILLO" || cat === "OTRO") ? sanitize(libre, 50) : cat; let fStore = sanitize(store, 60);
@@ -246,7 +229,7 @@
                 let isCommunity = (aisle !== "OTRO_PASILLO" && cat !== "OTRO"); carrito.push({ id: Date.now(), name: fName, price: price, qty: qty, unit: unit, store: fStore, isCommunity: isCommunity }); window.renderCarrito(); window.guardarLocal();
                 if(isCommunity && price > 0) { try { await addDoc(collection(db, "productos_comunidad"), { producto: fName, precioUSD: price, unidad: unit, supermercado: fStore, fecha: new Date(), reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo" }); } catch(e) {} }
                 document.getElementById('itemAisle').value=""; document.getElementById('itemCat').innerHTML='<option value="" disabled selected>📦 Primero elige un pasillo...</option>'; document.getElementById('itemCat').disabled = true; document.getElementById('itemNameLibre').value=""; document.getElementById('itemNameLibre').style.display="none"; document.getElementById('itemBrand').value=""; document.getElementById('itemBrandLibre').value=""; document.getElementById('itemBrandLibre').style.display="none"; document.getElementById('itemQty').value='1'; document.getElementById('itemUnit').value='und'; document.getElementById('itemPrice').value='';
-                if(storeInput) storeInput.inputValue = ''; // Limpiamos el buscador de mapas
+                document.getElementById('storeName').value = ''; 
             } else alert("Cantidad inválida.");
         }
 
@@ -273,16 +256,15 @@
         window.addFromCommunity = function(name, price, unit, store) { carrito.push({ id: Date.now(), name: name, price: parseFloat(price), qty: 1, unit: unit, store: store, isCommunity: true }); window.renderCarrito(); window.guardarLocal(); const toast = document.getElementById('toast'); toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 2500); }
         window.switchTab = function(tab) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${tab}`).classList.add('active'); document.getElementById(`btn-${tab}`).classList.add('active'); if(tab === 'precios') window.loadCommunity(); if(tab === 'historial') window.renderHistorialPantalla(); }
         
-        // EL NUEVO MOTOR MANUAL (100% SEGURO Y SIN ERRORES CORS)
+        // MOTOR MANUAL: Sin dependencias externas, sin CORS, 100% amigable con la batería
         window.fetchRates = function() { 
             const inBcv = document.getElementById('tasaBCVInput'); 
             const inBin = document.getElementById('tasaBinanceInput'); 
             
-            // Si no hay nada guardado en memoria, ponemos valores en cero para que el usuario los llene
+            // Valores iniciales si no hay nada guardado
             if(!inBcv.value || inBcv.value === "") inBcv.value = "0,00";
             if(!inBin.value || inBin.value === "") inBin.value = "0,00";
             
-            // Si tenemos un valor de BCV, lo asignamos a la variable global para los cálculos
             const val = inBcv.value;
             const v = parseVE(val);
             if(v > 0) tasaActual = v;
