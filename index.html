@@ -371,6 +371,16 @@
         window.updateRatesManual = function() { const val = document.getElementById('tasaBCVInput').value; const v = parseVE(val); if(v>0) tasaActual=v; window.updateTotals(); window.guardarLocal(); }
         
         window.inicializarCatalogos(); window.cargarLocal(); window.fetchRates();
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').then(registration => {
+            console.log('✅ ServiceWorker registrado con éxito. App lista para modo offline.');
+          }).catch(error => {
+            console.log('⚠️ Fallo al registrar el ServiceWorker:', error);
+          });
+        });
+      }
     </script>
 </body>
 </html>
