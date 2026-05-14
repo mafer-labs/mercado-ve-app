@@ -168,9 +168,27 @@
         window.logout = function() { signOut(auth); }
 
         window.inicializarCatalogos = function() {
-            const selectAisle = document.getElementById('itemAisle'); Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat))); let optOtro = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); optOtro.style.fontWeight = "bold"; selectAisle.add(optOtro);
-            const selectBrand = document.getElementById('itemBrand'); marcasOficiales.sort().forEach(m => selectBrand.add(new Option(m, m))); let optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; selectBrand.add(optB);
+            // 1. Inicializar Pasillos
+            const selectAisle = document.getElementById('itemAisle'); 
+            Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat))); 
+            let optOtro = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); 
+            optOtro.style.fontWeight = "bold"; 
+            selectAisle.add(optOtro);
             
+            // 2. Inicializar Marcas (Con "Sin Marca" de primero)
+            const selectBrand = document.getElementById('itemBrand'); 
+            // Ponemos "Sin Marca" de primero a la fuerza
+            selectBrand.add(new Option("Sin Marca", "Sin Marca"));
+            
+            // Filtramos "Sin Marca" del arreglo original, ordenamos el resto alfabéticamente y los agregamos
+            marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => selectBrand.add(new Option(m, m))); 
+            
+            // Ponemos "Otra" de último
+            let optB = new Option("✏️ Otra...", "OTRA"); 
+            optB.style.fontWeight = "bold"; 
+            selectBrand.add(optB);
+            
+            // 3. Inicializar Supermercados
             const catSup = document.getElementById('cat-supermercados');
             catSup.innerHTML = "";
             supermercadosFijos.forEach(s => catSup.innerHTML += `<option value="${s}">`);
