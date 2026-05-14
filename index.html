@@ -283,7 +283,7 @@
             } else { currentUser = null; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-controls').style.display = 'none'; } 
         });
 
-        window.loginConGoogle = function() { signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message)); }
+        window.loginConGoogle = function() { signInWithRedirect(auth, provider).catch(e => alert("Error: " + e.message)); }
         window.logout = function() { signOut(auth); }
 
         window.inicializarCatalogos = function() {
