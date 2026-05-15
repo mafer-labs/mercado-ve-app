@@ -20,7 +20,6 @@
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
         @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
         
-        /* ESTILOS DEL PAYWALL Y ADMIN */
         .premium-btn { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(245,158,11,0.3); }
         .paywall-box { background: var(--bg-rates); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 15px; text-align: left; }
         .paywall-input { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-family: 'Inter', sans-serif; font-size: 14px; margin-top: 8px; background: var(--bg-input); color: var(--text-main); box-sizing: border-box; }
@@ -211,7 +210,7 @@
 
         // === LOGICA DE ADMIN OCULTA ===
         window.handleAdminClick = function() {
-            const adminEmail = 'mariac.assistant@gmail.com'; // CAMBIA POR TU CORREO
+            const adminEmail = 'mariac.assistant@gmail.com'; 
             if (currentUser && currentUser.email === adminEmail) {
                 adminClicks++;
                 if (adminClicks >= 5) {
@@ -241,7 +240,7 @@
                     `;
                     listEl.appendChild(card);
                 });
-            } catch(e) { listEl.innerHTML = '<p class="text-red">Error al cargar.</p>'; }
+            } catch(e) { listEl.innerHTML = '<p class="text-red">Error al cargar pagos pendientes.</p>'; }
         };
 
         window.approvePayment = async function(payId, userId) {
@@ -251,7 +250,10 @@
                 await updateDoc(doc(db, "pagos_pendientes", payId), { estado: "completado" });
                 mostrarToast("🚀 Usuario activado correctamente");
                 window.loadAdminPayments();
-            } catch(e) { alert("Error al aprobar."); }
+            } catch(e) { 
+                console.error(e);
+                alert("Error al aprobar: " + e.message); 
+            }
         };
 
         // === FUNCIONES GENERALES ===
@@ -343,14 +345,84 @@
             try { await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), { nombre: sanitize(n, 50), items_array: carrito, total: totalUSD, fecha: new Date().toLocaleDateString(), timestamp: new Date(), tasaBCV_guardada: tasaActual }); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); } catch(e) { alert("Error."); }
         };
 
-        window.cargarHistorialNube = async function() { if(!currentUser) return; try { const snap = await getDocs(query(collection(db, `usuarios/${currentUser.uid}/historial`))); historialNube = []; snap.forEach(d => historialNube.push({ id: d.id, ...d.data() })); window.renderHistorialPantalla(); } catch(e) {} };
-        window.renderHistorialPantalla = function() { const hl = document.getElementById('historial-list'); hl.innerHTML = ''; historialNube.forEach(c => { const div = document.createElement('div'); div.className = 'historial-card'; div.innerHTML = `<b>${escapeHTML(c.nombre)}</b><br><span class="text-muted">${c.fecha}</span> <b class="text-green" style="float:right;">$${c.total.toFixed(2)}</b>`; hl.appendChild(div); }); };
+        // RESTAURADO: HISTORIAL COMPLETO
+        window.cargarHistorialNube = async function() { 
+            if(!currentUser) return; 
+            const hl = document.getElementById('historial-list'); 
+            hl.innerHTML = '<p class="text-muted" style="text-align:center;">Sincronizando... ☁️</p>'; 
+            try { 
+                const snapshot = await getDocs(query(collection(db, `usuarios/${currentUser.uid}/historial`))); 
+                historialNube = []; 
+                snapshot.forEach(doc => historialNube.push({ id: doc.id, ...doc.data() })); 
+                historialNube.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds); 
+                window.renderHistorialPantalla(); 
+            } catch(e) { hl.innerHTML = '<p class="text-red" style="text-align:center;">Error de conexión.</p>'; } 
+        }
 
+        window.renderHistorialPantalla = function() { 
+            const hl = document.getElementById('historial-list'); 
+            if(historialNube.length === 0) return hl.innerHTML = '<p class="text-muted" style="text-align:center;">No hay listas guardadas.</p>'; 
+            hl.innerHTML = ''; 
+            historialNube.forEach(compra => { 
+                const div = document.createElement('div'); div.className = 'historial-card'; 
+                let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : ''; 
+                let safeListHTML = ""; 
+                if (compra.items_array) { 
+                    compra.items_array.forEach(item => { 
+                        const sName = escapeHTML(item.name); const sStore = escapeHTML(item.store); const sUnit = escapeHTML(item.unit || "und"); let displayQty = item.qty.toString().replace('.', ','); 
+                        safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${displayQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`; 
+                    }); 
+                } 
+                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details" style="display:none; padding-top:10px;"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`; 
+                hl.appendChild(div); 
+            }); 
+        }
+
+        window.toggleHistorial = function(id) { const d = document.getElementById(`detalles-${id}`); d.style.display = (d.style.display === "none" || d.style.display === "") ? "block" : "none"; }
+        window.cargarA_Calculadora = function(id) { if (carrito.length > 0) if (!confirm("¿Reemplazar calculadora actual?")) return; let compra = historialNube.find(c => c.id === id); if (compra && compra.items_array) { carrito = compra.items_array; if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual.toString().replace('.', ','); } if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada.toString().replace('.', ','); } listaActualId = id; listaActualNombre = compra.nombre; window.renderCarrito(); window.guardarLocal(); window.switchTab('lista'); } }
+        window.borrarHistorialNube = async function(id) { if(!currentUser) return; if(confirm("¿Eliminar para siempre?")) { try { await deleteDoc(doc(db, `usuarios/${currentUser.uid}/historial`, id)); window.cargarHistorialNube(); } catch(e) { alert("Error al borrar."); } } }
+
+
+        // RESTAURADO: COMUNIDAD COMPLETA
         window.loadCommunity = async function() {
-            const listEl = document.getElementById('precios-list'); listEl.innerHTML = '<p class="text-muted">Cargando...</p>';
-            try { const snap = await getDocs(collection(db, "productos_comunidad")); listEl.innerHTML = ''; snap.forEach(d => { const p = d.data(); listEl.innerHTML += `<div style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between;"><span>${p.producto}</span><span><b>$${p.precioUSD}</b> ${userPlan === 'gratis' ? '🔒' : '➕'}</span></div>`; }); } catch(e) { listEl.innerHTML = 'Error.'; }
-        };
+            const listEl = document.getElementById('precios-list'); listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Cargando...</p>';
+            try { 
+                const snapshot = await getDocs(query(collection(db, "productos_comunidad"))); 
+                let docs = []; snapshot.forEach(d => docs.push(d.data())); 
+                let agrupados = {}; 
+                docs.forEach(data => { 
+                    let prod = data.producto; let sup = data.supermercado || "N/A"; let autor = data.reportadoPor || "Anónimo"; let uni = data.unidad || "und"; 
+                    if(!agrupados[prod]) agrupados[prod] = {}; 
+                    agrupados[prod][sup] = { p: data.precioUSD, a: autor, u: uni }; 
+                }); 
+                listEl.innerHTML = ''; 
+                const nombres = Object.keys(agrupados).sort(); 
+                if(nombres.length === 0) return listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Sin datos.</p>'; 
+                nombres.forEach(prod => { 
+                    const div = document.createElement('div'); div.className = 'prod-group'; 
+                    let html = `<div class="prod-header" style="font-weight:bold; margin-top:15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list" style="list-style:none; padding:0;">`; 
+                    const tiendas = Object.keys(agrupados[prod]).sort((a,b) => agrupados[prod][a].p - agrupados[prod][b].p); 
+                    tiendas.forEach((t, i) => { 
+                        const info = agrupados[prod][t]; 
+                        const pSafe = escapeHTML(prod).replace(/'/g, "\\'"); const tSafe = escapeHTML(t).replace(/'/g, "\\'"); const uSafe = escapeHTML(info.u).replace(/'/g, "\\'"); 
+                        
+                        let actionBtn = "";
+                        if(userPlan === "gratis") {
+                            actionBtn = `<button onclick="window.showPremiumModal()" class="locked-btn">🔒</button>`;
+                        } else {
+                            actionBtn = `<button onclick="window.addFromCommunity('${pSafe}', ${info.p}, '${uSafe}', '${tSafe}')" style="background: var(--primary-green); color: white; border: none; border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px;">➕</button>`;
+                        }
 
+                        html += `<li class="prod-store-item" style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #f9f9f9;"><div style="display:flex; flex-direction:column;"><span class="text-main">${i===0 && tiendas.length>1 ? '🏆' : '📍'} ${escapeHTML(t)}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${escapeHTML(info.a)}</span></div><div style="display:flex; align-items:center; gap: 10px;"><span class="${i===0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size: 11px; color: var(--text-muted); font-weight:normal;">x ${escapeHTML(info.u)}</span></span> ${actionBtn} </div></li>`; 
+                        
+                    }); div.innerHTML = html + `</ul>`; listEl.appendChild(div); 
+                }); 
+            } catch (e) { listEl.innerHTML = '<p class="text-red" style="text-align:center;">Error.</p>'; }
+        }
+
+        window.filterCommunity = function() { const query = document.getElementById('searchCommunity').value.toLowerCase(); const groups = document.querySelectorAll('.prod-group'); groups.forEach(group => { const text = group.innerText.toLowerCase(); group.style.display = text.includes(query) ? 'block' : 'none'; }); }
+        window.addFromCommunity = function(name, price, unit, store) { carrito.push({ id: Date.now(), name: name, price: parseFloat(price), qty: 1, unit: unit, store: store, isCommunity: true }); window.renderCarrito(); window.guardarLocal(); mostrarToast("✅ Agregado a la calculadora"); }
+        
         window.switchTab = function(t) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); document.getElementById(`btn-${t}`).classList.add('active'); if(t === 'precios') window.loadCommunity(); if(t === 'historial') window.cargarHistorialNube(); };
         window.updateRatesManual = function() { tasaActual = parseVE(document.getElementById('tasaBCVInput').value); window.updateTotals(); window.guardarLocal(); };
 
