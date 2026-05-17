@@ -195,6 +195,13 @@
         import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=6";
 
+        // === RESTAURADO: DESLIZAR PARA ACTUALIZAR (Pull-to-refresh) ===
+        let pStart = { y: 0 }; let pCurrent = { y: 0 }; let isPulling = false;
+        const ptr = document.getElementById('ptr'); const ptrText = document.getElementById('ptr-text'); const ptrIcon = document.getElementById('ptr-icon');
+        document.addEventListener('touchstart', e => { if (window.scrollY === 0) { pStart.y = e.touches[0].clientY; isPulling = true; } }, {passive: true});
+        document.addEventListener('touchmove', e => { if (!isPulling) return; pCurrent.y = e.touches[0].clientY; let diff = pCurrent.y - pStart.y; if (diff > 10 && window.scrollY === 0) { ptr.style.display = 'flex'; if (diff > 100) { ptrText.textContent = "Suelta para actualizar"; ptrIcon.textContent = "🔄"; } else { ptrText.textContent = "Desliza para actualizar..."; ptrIcon.textContent = "⬇️"; } } }, {passive: true});
+        document.addEventListener('touchend', e => { if (!isPulling) return; isPulling = false; let diff = pCurrent.y - pStart.y; if (diff > 100 && window.scrollY === 0) { ptrText.textContent = "Actualizando..."; ptrIcon.textContent = "⏳"; setTimeout(() => { window.location.href = window.location.href.split('?')[0] + '?v=' + new Date().getTime(); }, 300); } else { ptr.style.display = 'none'; } });
+
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -389,7 +396,6 @@
         window.cargarLocal = function() { if(localStorage.getItem('mercadoVE_carrito_v2')) { carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2')); window.renderCarrito(); } if(localStorage.getItem('mercadoVE_tasaBinance')) { document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance').replace('.', ','); } if(localStorage.getItem('mercadoVE_tasaGuardada')) { let st = localStorage.getItem('mercadoVE_tasaGuardada'); document.getElementById('tasaBCVInput').value = st.replace('.', ','); tasaActual = parseFloat(st); } };
         window.vaciarLista = function(sinP = false) { if(sinP || confirm("¿Vaciar calculadora?")) { carrito = []; listaActualId = null; window.renderCarrito(); window.guardarLocal(); } };
 
-        // === BOTONES DE EDITAR Y ELIMINAR RESTAURADOS ===
         window.renderCarrito = function() {
             const list = document.getElementById('list'); list.innerHTML = ''; let tUSD = 0;
             carrito.forEach(item => {
@@ -409,7 +415,6 @@
             totalUSD = tUSD; window.updateTotals();
         };
 
-        // === LÓGICA DE EDICIÓN RESTAURADA ===
         window.editPrice = async function(id) { 
             let item = carrito.find(i => i.id === id); 
             if(!item) return; 
