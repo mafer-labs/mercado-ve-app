@@ -30,7 +30,13 @@
         .unit-input {
             width: 60%; border: none; border-left: 1px solid var(--border-color);
             background: transparent; color: var(--text-main);
-            font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 8px;
+            font-family: 'Inter', sans-serif; font-size: 12px; padding: 0 6px;
+            appearance: none; -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 6px center;
+            padding-right: 20px;
+            cursor: pointer;
         }
         .unit-input:focus { outline: none; }
 
@@ -228,30 +234,27 @@
                 </select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
 
-                <!-- Cantidad + Unidad libre -->
+                <!-- Cantidad + Presentación -->
                 <div style="display: flex; gap: 8px; width: 100%;">
                     <div class="qty-unit-box">
                         <input type="text" inputmode="decimal" id="itemQty" class="qty-input"
                                placeholder="Cant." value="1"
                                oninput="window.updatePricePreview()">
-                        <input type="text" id="itemUnit" class="unit-input"
-                               list="unit-options" placeholder="und" value="und"
-                               oninput="window.updatePricePreview()">
-                        <datalist id="unit-options">
-                            <option value="und">
-                            <option value="kg">
-                            <option value="gr">
-                            <option value="L">
-                            <option value="ml">
-                            <option value="cartón">
-                            <option value="1/2 cartón">
-                            <option value="paq">
-                        </datalist>
+                        <select id="itemUnit" class="unit-input"
+                                onchange="window.verificarUnidad()"
+                                style="cursor:pointer;">
+                            <!-- poblado por inicializarCatalogos() -->
+                        </select>
                     </div>
                     <input type="text" inputmode="decimal" id="itemPrice" class="input-base"
                            placeholder="Precio $" style="flex: 1 1 45%;"
                            oninput="window.updatePricePreview()">
                 </div>
+                <!-- Campo libre para unidad personalizada -->
+                <input type="text" id="itemUnitLibre" class="input-base input-full"
+                       placeholder="Escribe la presentación (ej: 450 gr, 2 L)..."
+                       style="display:none;"
+                       oninput="window.updatePricePreview()">
 
                 <!-- Toggle: modo de precio -->
                 <div class="price-mode-toggle">
@@ -314,7 +317,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=7";
+        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales, presentacionesFijas } from "./catalogo.js?v=8";
 
         // ── Pull to refresh ──────────────────────────────────────────────────
         let pStart = { y: 0 }, pCurrent = { y: 0 }, isPulling = false;
@@ -406,12 +409,21 @@
             window.updatePricePreview();
         };
 
+        // Helper: obtener la unidad real (del select o del campo libre si eligió "Otra")
+        function getUnitValue() {
+            const sel = document.getElementById('itemUnit').value;
+            if (sel === "OTRA_UNIDAD") {
+                return document.getElementById('itemUnitLibre').value.trim() || "und";
+            }
+            return sel || "und";
+        }
+
         // Muestra un preview del total calculado bajo el formulario
         window.updatePricePreview = function() {
-            const qty    = parseVE(document.getElementById('itemQty').value) || 1;
-            const unit   = document.getElementById('itemUnit').value || 'und';
-            const price  = parseVE(document.getElementById('itemPrice').value);
-            const prev   = document.getElementById('price-preview');
+            const qty   = parseVE(document.getElementById('itemQty').value) || 1;
+            const unit  = getUnitValue();
+            const price = parseVE(document.getElementById('itemPrice').value);
+            const prev  = document.getElementById('price-preview');
 
             if (!price) { prev.textContent = ''; return; }
 
@@ -543,7 +555,11 @@
                 document.getElementById('user-controls').style.display = 'none';
             }
         });
-        window.loginConGoogle = () => signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message));
+        window.loginConGoogle = () => {
+            // Forzar siempre el selector de cuentas de Google
+            provider.setCustomParameters({ prompt: 'select_account' });
+            signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message));
+        };
         window.logout = () => signOut(auth).then(() => location.reload());
 
         // ── Catálogos ─────────────────────────────────────────────────────────
@@ -557,6 +573,11 @@
             marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => sB.add(new Option(m, m)));
             const optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; sB.add(optB);
 
+            // Poblar dropdown de presentaciones/unidades
+            const sU = document.getElementById('itemUnit');
+            presentacionesFijas.forEach(p => sU.add(new Option(p.label, p.value)));
+            const optU = new Option("✏️ Otra presentación...", "OTRA_UNIDAD"); optU.style.fontWeight = "bold"; sU.add(optU);
+
             supermercadosFijos.forEach(s => document.getElementById('cat-supermercados').innerHTML += `<option value="${s}">`);
         };
 
@@ -564,15 +585,14 @@
             const aisle = document.getElementById('itemAisle').value;
             const sP    = document.getElementById('itemCat');
             const iL    = document.getElementById('itemNameLibre');
-            const uI    = document.getElementById('itemUnit');
+            const uSel  = document.getElementById('itemUnit');
 
             // Unidad por defecto según pasillo
-            if (aisle === "🥬 Verduras y Frutas" || aisle === "🥩 Carnes y Pollos") {
-                uI.value = "kg";
-                // Para peso, precio total tiene más sentido
+            if (aisle === "🥬 Verduras y Frutas" || aisle === "🥩 Carnes y Pollos" || aisle === "🐟 Pescados y Mariscos") {
+                uSel.value = "kg";
                 window.setPriceMode('total');
             } else {
-                uI.value = "und";
+                uSel.value = "und";
             }
 
             sP.innerHTML = '<option value="" disabled selected>📦 Selecciona un Producto...</option>';
@@ -589,13 +609,26 @@
         window.verificarTipoProducto = function() {
             const v = document.getElementById('itemCat').value;
             document.getElementById('itemNameLibre').style.display = v === "OTRO" ? "block" : "none";
-            // Huevos → sugerir cartón
+            // Huevos → sugerir cartón en el selector
             if (v === "Huevos") document.getElementById('itemUnit').value = "cartón";
             window.updatePricePreview();
         };
 
         window.verificarMarca = function() {
             document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none";
+        };
+
+        window.verificarUnidad = function() {
+            const val   = document.getElementById('itemUnit').value;
+            const libre = document.getElementById('itemUnitLibre');
+            if (val === "OTRA_UNIDAD") {
+                libre.style.display = "block";
+                libre.focus();
+            } else {
+                libre.style.display = "none";
+                libre.value = "";
+            }
+            window.updatePricePreview();
         };
 
         // ── Persistencia local ────────────────────────────────────────────────
@@ -703,7 +736,7 @@
             const bLibre = document.getElementById('itemBrandLibre').value;
 
             const qty    = parseVE(document.getElementById('itemQty').value) || 1;
-            const unit   = document.getElementById('itemUnit').value || 'und';
+            const unit   = getUnitValue();
             const rawPrice = parseVE(document.getElementById('itemPrice').value);
             const store  = document.getElementById('storeName').value || "No especificado";
             // MEJORA 7: recordar supermercado para la próxima sesión
@@ -795,6 +828,7 @@
             document.getElementById('itemBrand').value = "";
             document.getElementById('itemQty').value = '1';
             document.getElementById('itemUnit').value = 'und';
+            document.getElementById('itemUnitLibre').value = ""; document.getElementById('itemUnitLibre').style.display = "none";
             document.getElementById('itemPrice').value = '';
             document.getElementById('price-preview').textContent = '';
             window.setPriceMode('total');
