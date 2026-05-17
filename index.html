@@ -64,7 +64,7 @@
             <ul style="font-size: 13px; margin: 15px 0; padding-left: 20px; color: var(--text-main);">
                 <li>✅ <b>Multi-Listas Nube:</b> Guarda listas ilimitadas.</li>
                 <li>✅ <b>Importación Directa:</b> Agrega con 1 toque desde la comunidad (Sin candados 🔒).</li>
-                <li>✅ <b>Sin anuncios futuros.</b></li>
+                <li>✅ <b>Enlace Mágico:</b> Recibe y carga listas completas de tus familiares con un solo clic.</li>
             </ul>
 
             <div class="paywall-box">
@@ -156,9 +156,11 @@
                 <h3 class="total-box-usdt"><span id="totalUSDT">0.00</span> <span style="font-size: 14px; color: var(--text-muted);">USD</span></h3>
                 <p id="ahorroText" class="ahorro-text"></p>
             </div>
-            <div class="action-btns">
-                <button class="btn-secondary blue" onclick="window.guardarHistorialNube()">☁️ Guardar Nube</button>
-                <button class="btn-secondary" onclick="window.vaciarLista()">🗑️ Vaciar</button>
+            
+            <div class="action-btns" style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
+                <button class="btn-secondary blue" onclick="window.guardarHistorialNube()" style="flex: 1;">☁️ Guardar</button>
+                <button class="btn-secondary" onclick="window.compartirLista()" style="flex: 1; background: #25D366; color: white; border: none; font-weight: 700;">📲 Compartir</button>
+                <button class="btn-secondary" onclick="window.vaciarLista()" style="flex: 1;">🗑️ Vaciar</button>
             </div>
         </div>
 
@@ -208,6 +210,38 @@
         const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
         const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
 
+        // === CAPTURAR LINK MÁGICO ===
+        const params = new URLSearchParams(window.location.search);
+        let pendingImport = params.get('import') || sessionStorage.getItem('pendingImport');
+        if (params.get('import')) {
+            sessionStorage.setItem('pendingImport', params.get('import'));
+            window.history.replaceState({}, document.title, window.location.pathname); // Limpiamos la URL visualmente
+        }
+
+        window.procesarImportacion = function(importData) {
+            if (userPlan === "gratis") {
+                alert("🌟 ¡Te han compartido un 'Enlace Mágico'!\n\nPara importar esta lista con un solo toque y unirla a tu calculadora, necesitas CuentaClara Premium.");
+                window.showPremiumModal();
+                return;
+            }
+            try {
+                let decodedStr = decodeURIComponent(escape(atob(importData)));
+                let compactData = JSON.parse(decodedStr);
+                if (compactData && compactData.length > 0) {
+                    if (confirm("📲 ¡Han compartido una lista contigo!\n\n¿Deseas cargarla en tu calculadora? (Reemplazará lo que tienes actualmente)")) {
+                        carrito = compactData.map((i, idx) => ({
+                            id: Date.now() + idx, name: i.n, price: i.p, qty: i.q, unit: i.u || 'und', store: 'Importada'
+                        }));
+                        window.renderCarrito();
+                        window.guardarLocal();
+                        mostrarToast("✅ Lista importada con éxito");
+                    }
+                }
+            } catch(e) {
+                alert("El enlace mágico está dañado o es inválido.");
+            }
+        };
+
         // === LOGICA DE ADMIN OCULTA ===
         window.handleAdminClick = function() {
             const adminEmail = 'mariac.assistant@gmail.com'; 
@@ -256,6 +290,41 @@
             }
         };
 
+        // === COMPARTIR WHATSAPP ===
+        window.compartirLista = function(historialId = null) {
+            let lista = []; let nombre = "Mi Mercado";
+            if (historialId) {
+                let compra = historialNube.find(c => c.id === historialId);
+                if(compra) { lista = compra.items_array; nombre = compra.nombre; }
+            } else {
+                if (carrito.length === 0) return alert("La calculadora está vacía.");
+                lista = carrito;
+            }
+
+            let texto = `📝 *Lista CuentaClara: ${nombre}*\n\n`;
+            let total = 0; let compactData = [];
+            
+            lista.forEach(i => {
+                let sub = i.price * i.qty; total += sub;
+                texto += `▪️ ${i.qty.toString().replace('.',',')} ${i.unit || 'und'} ${i.name} - $${sub.toFixed(2)}\n`;
+                // Compactamos la data para el enlace mágico
+                compactData.push({n: i.name, p: i.price, q: i.qty, u: i.unit});
+            });
+            texto += `\n💰 *Suma USD:* $${total.toFixed(2)}`;
+            
+            // Generar Link Mágico
+            try {
+                let dataStr = JSON.stringify(compactData);
+                let encoded = btoa(unescape(encodeURIComponent(dataStr)));
+                // URL de tu app en GitHub
+                let link = "https://mafer-labs.github.io/mercado-ve-app/?import=" + encoded;
+                texto += `\n\n👇 Toca aquí para importar esta lista a tu app CuentaClara:\n${link}`;
+            } catch(e) { console.error("Error al crear link"); }
+
+            let waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(texto);
+            window.open(waUrl, '_blank');
+        };
+
         // === FUNCIONES GENERALES ===
         window.showPremiumModal = function() { document.getElementById('premium-modal').style.display = 'flex'; };
         window.reportarPago = async function() {
@@ -284,6 +353,14 @@
                     else { await setDoc(userRef, { email: user.email, plan: "gratis", fecha_registro: new Date() }); userPlan = "gratis"; }
                 } catch(e) { userPlan = "gratis"; }
                 document.getElementById('btn-go-premium').style.display = (userPlan === "gratis") ? 'flex' : 'none';
+                
+                // Si había un enlace mágico esperando a que cargara el plan, lo procesamos
+                if (pendingImport) {
+                    window.procesarImportacion(pendingImport);
+                    sessionStorage.removeItem('pendingImport');
+                    pendingImport = null;
+                }
+
                 window.cargarHistorialNube(); 
                 if(document.getElementById('tab-precios').classList.contains('active')) window.loadCommunity();
             } else { currentUser = null; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-controls').style.display = 'none'; } 
@@ -345,7 +422,6 @@
             try { await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), { nombre: sanitize(n, 50), items_array: carrito, total: totalUSD, fecha: new Date().toLocaleDateString(), timestamp: new Date(), tasaBCV_guardada: tasaActual }); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); } catch(e) { alert("Error."); }
         };
 
-        // RESTAURADO: HISTORIAL COMPLETO
         window.cargarHistorialNube = async function() { 
             if(!currentUser) return; 
             const hl = document.getElementById('historial-list'); 
@@ -365,7 +441,11 @@
             hl.innerHTML = ''; 
             historialNube.forEach(compra => { 
                 const div = document.createElement('div'); div.className = 'historial-card'; 
-                let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar a Calculadora</button>` : ''; 
+                
+                // SE AGREGÓ EL BOTÓN COMPARTIR AL HISTORIAL
+                let btnCompartir = `<button onclick="window.compartirLista('${compra.id}')" style="background:transparent; color:#25D366; border:1px solid #25D366; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600; margin-right:8px;">📲 Compartir</button>`;
+                let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar</button>` : ''; 
+                
                 let safeListHTML = ""; 
                 if (compra.items_array) { 
                     compra.items_array.forEach(item => { 
@@ -373,7 +453,7 @@
                         safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${displayQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`; 
                     }); 
                 } 
-                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details" style="display:none; padding-top:10px;"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`; 
+                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details" style="display:none; padding-top:10px;"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCompartir}${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`; 
                 hl.appendChild(div); 
             }); 
         }
@@ -382,8 +462,6 @@
         window.cargarA_Calculadora = function(id) { if (carrito.length > 0) if (!confirm("¿Reemplazar calculadora actual?")) return; let compra = historialNube.find(c => c.id === id); if (compra && compra.items_array) { carrito = compra.items_array; if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual.toString().replace('.', ','); } if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada.toString().replace('.', ','); } listaActualId = id; listaActualNombre = compra.nombre; window.renderCarrito(); window.guardarLocal(); window.switchTab('lista'); } }
         window.borrarHistorialNube = async function(id) { if(!currentUser) return; if(confirm("¿Eliminar para siempre?")) { try { await deleteDoc(doc(db, `usuarios/${currentUser.uid}/historial`, id)); window.cargarHistorialNube(); } catch(e) { alert("Error al borrar."); } } }
 
-
-        // RESTAURADO: COMUNIDAD COMPLETA
         window.loadCommunity = async function() {
             const listEl = document.getElementById('precios-list'); listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Cargando...</p>';
             try { 
