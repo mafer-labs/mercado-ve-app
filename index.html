@@ -12,9 +12,9 @@
     <style>
         body { overflow-x: hidden; } 
         .qty-unit-box { display: flex; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); flex: 1 1 45%; }
-        .qty-input { width: 40%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
+        .qty-input { width: 45%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
         .qty-input:focus { outline: none; }
-        .unit-select { width: 60%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 8px;}
+        .unit-select { width: 55%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
         .unit-select:focus { outline: none; }
         #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
@@ -36,7 +36,7 @@
             <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
             <ul>
                 <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco.</li>
-                <li><strong>Empaques Exactos:</strong> Si compras 0.4kg de queso, deja la cantidad en 1 y escribe "0.4 kg" en la unidad.</li>
+                <li><strong>Empaques:</strong> Si compras 1/2 cartón de huevos, deja la Cantidad en 1 y elige "1/2 cartón" en la unidad.</li>
                 <li><strong>Comunidad:</strong> Busca productos en Explorar y llévalos a tu calculadora.</li>
                 <li><strong>Offline:</strong> Esta app funciona casi toda sin internet para ahorrar tus datos.</li>
             </ul>
@@ -137,15 +137,14 @@
                 <div style="display: flex; gap: 8px; width: 100%;">
                     <div class="qty-unit-box">
                         <input type="text" inputmode="decimal" id="itemQty" class="qty-input" placeholder="Cant." value="1">
-                        <input type="text" id="itemUnit" class="unit-select" list="unit-options" placeholder="und" value="und">
-                        <datalist id="unit-options">
-                            <option value="und">
-                            <option value="kg">
-                            <option value="gr">
-                            <option value="L">
-                            <option value="cartón">
-                            <option value="1/2 cartón">
-                        </datalist>
+                        <select id="itemUnit" class="unit-select">
+                            <option value="und">und</option>
+                            <option value="kg">kg</option>
+                            <option value="gr">gr</option>
+                            <option value="L">L</option>
+                            <option value="cartón">cartón</option>
+                            <option value="1/2 cartón">1/2 cartón</option>
+                        </select>
                     </div>
                     <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" style="flex: 1 1 45%;">
                 </div>
@@ -195,7 +194,7 @@
         import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=6";
 
-        // === RESTAURADO: DESLIZAR PARA ACTUALIZAR (Pull-to-refresh) ===
+        // === DESLIZAR PARA ACTUALIZAR (Pull-to-refresh) ===
         let pStart = { y: 0 }; let pCurrent = { y: 0 }; let isPulling = false;
         const ptr = document.getElementById('ptr'); const ptrText = document.getElementById('ptr-text'); const ptrIcon = document.getElementById('ptr-icon');
         document.addEventListener('touchstart', e => { if (window.scrollY === 0) { pStart.y = e.touches[0].clientY; isPulling = true; } }, {passive: true});
@@ -400,9 +399,11 @@
             const list = document.getElementById('list'); list.innerHTML = ''; let tUSD = 0;
             carrito.forEach(item => {
                 const itemTotal = item.price * item.qty; tUSD += itemTotal; const li = document.createElement('li'); li.className = "calc-item";
+                
+                // AQUÍ ES DONDE SE MUESTRA LA UNIDAD EN LA LISTA
                 li.innerHTML = `
                     <div style="display:flex; flex-direction:column;">
-                        <span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">${item.unit || 'und'}</span> ${item.name}</span>
+                        <span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:bold; color:var(--primary-blue); background:#eef2ff; padding:2px 4px; border-radius:4px; margin: 0 4px;">${item.unit || 'und'}</span> ${item.name}</span>
                         <span class="item-store text-muted">📍 ${item.store}</span>
                     </div>
                     <div style="display:flex; align-items:center;">
