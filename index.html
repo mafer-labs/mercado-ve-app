@@ -11,11 +11,6 @@
     <link rel="stylesheet" href="style.css">
     <style>
         body { overflow-x: hidden; } 
-        .qty-unit-box { display: flex; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); flex: 1 1 45%; }
-        .qty-input { width: 45%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
-        .qty-input:focus { outline: none; }
-        .unit-select { width: 55%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
-        .unit-select:focus { outline: none; }
         #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
         @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
@@ -36,8 +31,8 @@
             <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
             <ul>
                 <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco.</li>
-                <li><strong>Empaques:</strong> Si compras 1/2 cartón de huevos, deja la Cantidad en 1 y elige "1/2 cartón" en la unidad.</li>
-                <li><strong>Comunidad:</strong> Busca productos en Explorar y llévalos a tu calculadora.</li>
+                <li><strong>Empaques Exactos:</strong> Si compras 1 paquete de 400gr, deja el Multiplicador en 1 y escribe "400gr" en Presentación.</li>
+                <li><strong>Productos por Peso:</strong> Si compras Queso, pon 0.4 en Multiplicador y "kg" en Presentación.</li>
                 <li><strong>Offline:</strong> Esta app funciona casi toda sin internet para ahorrar tus datos.</li>
             </ul>
             <button onclick="document.getElementById('help-modal').style.display='none'" class="btn-main" style="margin-top:20px;">¡Entendido!</button>
@@ -134,19 +129,28 @@
                 <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()"><option value="" disabled selected>🏷️ Marca...</option></select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
                 
-                <div style="display: flex; gap: 8px; width: 100%;">
-                    <div class="qty-unit-box">
-                        <input type="text" inputmode="decimal" id="itemQty" class="qty-input" placeholder="Cant." value="1">
-                        <select id="itemUnit" class="unit-select">
-                            <option value="und">und</option>
-                            <option value="kg">kg</option>
-                            <option value="gr">gr</option>
-                            <option value="L">L</option>
-                            <option value="cartón">cartón</option>
-                            <option value="1/2 cartón">1/2 cartón</option>
-                        </select>
+                <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 10px;">
+                    <div style="display: flex; flex-direction: column; flex: 1;">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; padding-left: 2px;">Multiplicador</span>
+                        <input type="text" inputmode="decimal" id="itemQty" class="input-base" placeholder="Cant." value="1" style="margin-bottom: 0; text-align: center;">
                     </div>
-                    <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" style="flex: 1 1 45%;">
+                    <div style="display: flex; flex-direction: column; flex: 1.2;">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; padding-left: 2px;">Presentación</span>
+                        <input type="text" id="itemUnit" class="input-base" list="unit-options" placeholder="Ej: 400gr, kg" value="und" style="margin-bottom: 0; text-align: center;">
+                        <datalist id="unit-options">
+                            <option value="und">
+                            <option value="kg">
+                            <option value="gr">
+                            <option value="L">
+                            <option value="cartón">
+                            <option value="1/2 cartón">
+                            <option value="paquete">
+                        </datalist>
+                    </div>
+                    <div style="display: flex; flex-direction: column; flex: 1;">
+                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; padding-left: 2px;">Precio ($)</span>
+                        <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Total" style="margin-bottom: 0; text-align: center;">
+                    </div>
                 </div>
                 
                 <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
@@ -400,7 +404,7 @@
             carrito.forEach(item => {
                 const itemTotal = item.price * item.qty; tUSD += itemTotal; const li = document.createElement('li'); li.className = "calc-item";
                 
-                // AQUÍ ES DONDE SE MUESTRA LA UNIDAD EN LA LISTA
+                // MUESTRA LA UNIDAD ESTILIZADA EN LA LISTA
                 li.innerHTML = `
                     <div style="display:flex; flex-direction:column;">
                         <span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:bold; color:var(--primary-blue); background:#eef2ff; padding:2px 4px; border-radius:4px; margin: 0 4px;">${item.unit || 'und'}</span> ${item.name}</span>
@@ -420,7 +424,7 @@
             let item = carrito.find(i => i.id === id); 
             if(!item) return; 
             let prevPrice = item.price > 0 ? item.price.toString().replace('.', ',') : ''; 
-            let newPriceStr = prompt(`Precio unitario en $ para:\n${item.name} (Por ${item.unit || 'und'})`, prevPrice); 
+            let newPriceStr = prompt(`Precio total en $ para:\n${item.name} (${item.unit || 'und'})`, prevPrice); 
             if(newPriceStr !== null && newPriceStr.trim() !== '') { 
                 let newPrice = parseVE(newPriceStr); 
                 if(!isNaN(newPrice) && newPrice >= 0) { 
