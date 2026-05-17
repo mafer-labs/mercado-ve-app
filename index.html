@@ -129,14 +129,15 @@
                 <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()"><option value="" disabled selected>🏷️ Marca...</option></select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
                 
-                <div style="display: flex; gap: 8px; width: 100%; margin-bottom: 10px;">
-                    <div style="display: flex; flex-direction: column; flex: 1;">
-                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; padding-left: 2px;">Multiplicador</span>
-                        <input type="text" inputmode="decimal" id="itemQty" class="input-base" placeholder="Cant." value="1" style="margin-bottom: 0; text-align: center;">
+                <div class="calc-row">
+                    <div class="calc-col">
+                        <span class="calc-label">Mult.</span>
+                        <input type="text" inputmode="decimal" id="itemQty" class="input-base calc-input" placeholder="1" value="1">
                     </div>
-                    <div style="display: flex; flex-direction: column; flex: 1.2;">
-                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; padding-left: 2px;">Presentación</span>
-                        <input type="text" id="itemUnit" class="input-base" list="unit-options" placeholder="Ej: 400gr, kg" value="und" style="margin-bottom: 0; text-align: center;">
+                    
+                    <div class="calc-col calc-col-wide">
+                        <span class="calc-label">Presentación</span>
+                        <input type="text" id="itemUnit" class="input-base calc-input" list="unit-options" placeholder="Ej: 400gr" value="und">
                         <datalist id="unit-options">
                             <option value="und">
                             <option value="kg">
@@ -147,9 +148,10 @@
                             <option value="paquete">
                         </datalist>
                     </div>
-                    <div style="display: flex; flex-direction: column; flex: 1;">
-                        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 4px; padding-left: 2px;">Precio ($)</span>
-                        <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Total" style="margin-bottom: 0; text-align: center;">
+                    
+                    <div class="calc-col">
+                        <span class="calc-label">Precio ($)</span>
+                        <input type="text" inputmode="decimal" id="itemPrice" class="input-base calc-input" placeholder="Total">
                     </div>
                 </div>
                 
@@ -404,7 +406,6 @@
             carrito.forEach(item => {
                 const itemTotal = item.price * item.qty; tUSD += itemTotal; const li = document.createElement('li'); li.className = "calc-item";
                 
-                // MUESTRA LA UNIDAD ESTILIZADA EN LA LISTA
                 li.innerHTML = `
                     <div style="display:flex; flex-direction:column;">
                         <span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:bold; color:var(--primary-blue); background:#eef2ff; padding:2px 4px; border-radius:4px; margin: 0 4px;">${item.unit || 'und'}</span> ${item.name}</span>
@@ -509,48 +510,4 @@
         window.borrarHistorialNube = async function(id) { if(!currentUser) return; if(confirm("¿Eliminar para siempre?")) { try { await deleteDoc(doc(db, `usuarios/${currentUser.uid}/historial`, id)); window.cargarHistorialNube(); } catch(e) { alert("Error al borrar."); } } }
 
         window.loadCommunity = async function() {
-            const listEl = document.getElementById('precios-list'); listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Cargando...</p>';
-            try { 
-                const snapshot = await getDocs(query(collection(db, "productos_comunidad"))); 
-                let docs = []; snapshot.forEach(d => docs.push(d.data())); 
-                let agrupados = {}; 
-                docs.forEach(data => { 
-                    let prod = data.producto; let sup = data.supermercado || "N/A"; let autor = data.reportadoPor || "Anónimo"; let uni = data.unidad || "und"; 
-                    if(!agrupados[prod]) agrupados[prod] = {}; 
-                    agrupados[prod][sup] = { p: data.precioUSD, a: autor, u: uni }; 
-                }); 
-                listEl.innerHTML = ''; 
-                const nombres = Object.keys(agrupados).sort(); 
-                if(nombres.length === 0) return listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Sin datos.</p>'; 
-                nombres.forEach(prod => { 
-                    const div = document.createElement('div'); div.className = 'prod-group'; 
-                    let html = `<div class="prod-header" style="font-weight:bold; margin-top:15px; border-bottom: 1px solid #eee; padding-bottom: 5px;">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list" style="list-style:none; padding:0;">`; 
-                    const tiendas = Object.keys(agrupados[prod]).sort((a,b) => agrupados[prod][a].p - agrupados[prod][b].p); 
-                    tiendas.forEach((t, i) => { 
-                        const info = agrupados[prod][t]; 
-                        const pSafe = escapeHTML(prod).replace(/'/g, "\\'"); const tSafe = escapeHTML(t).replace(/'/g, "\\'"); const uSafe = escapeHTML(info.u).replace(/'/g, "\\'"); 
-                        
-                        let actionBtn = "";
-                        if(userPlan === "gratis") {
-                            actionBtn = `<button onclick="window.showPremiumModal()" class="locked-btn">🔒</button>`;
-                        } else {
-                            actionBtn = `<button onclick="window.addFromCommunity('${pSafe}', ${info.p}, '${uSafe}', '${tSafe}')" style="background: var(--primary-green); color: white; border: none; border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px;">➕</button>`;
-                        }
-
-                        html += `<li class="prod-store-item" style="display:flex; justify-content:space-between; padding: 10px 0; border-bottom: 1px solid #f9f9f9;"><div style="display:flex; flex-direction:column;"><span class="text-main">${i===0 && tiendas.length>1 ? '🏆' : '📍'} ${escapeHTML(t)}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${escapeHTML(info.a)}</span></div><div style="display:flex; align-items:center; gap: 10px;"><span class="${i===0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size: 11px; color: var(--text-muted); font-weight:normal;">x ${escapeHTML(info.u)}</span></span> ${actionBtn} </div></li>`; 
-                        
-                    }); div.innerHTML = html + `</ul>`; listEl.appendChild(div); 
-                }); 
-            } catch (e) { listEl.innerHTML = '<p class="text-red" style="text-align:center;">Error.</p>'; }
-        }
-
-        window.filterCommunity = function() { const query = document.getElementById('searchCommunity').value.toLowerCase(); const groups = document.querySelectorAll('.prod-group'); groups.forEach(group => { const text = group.innerText.toLowerCase(); group.style.display = text.includes(query) ? 'block' : 'none'; }); }
-        window.addFromCommunity = function(name, price, unit, store) { carrito.push({ id: Date.now(), name: name, price: parseFloat(price), qty: 1, unit: unit, store: store, isCommunity: true }); window.renderCarrito(); window.guardarLocal(); mostrarToast("✅ Agregado a la calculadora"); }
-        
-        window.switchTab = function(t) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); document.getElementById(`tab-${t}`).classList.add('active'); document.getElementById(`btn-${t}`).classList.add('active'); if(t === 'precios') window.loadCommunity(); if(t === 'historial') window.cargarHistorialNube(); };
-        window.updateRatesManual = function() { tasaActual = parseVE(document.getElementById('tasaBCVInput').value); window.updateTotals(); window.guardarLocal(); };
-
-        window.inicializarCatalogos(); window.cargarLocal();
-    </script>
-</body>
-</html>
+            const listEl = document.getElementById('precios-list'); listEl.
