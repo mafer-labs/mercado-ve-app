@@ -313,7 +313,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
         import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=7";
 
         // ── Pull to refresh ──────────────────────────────────────────────────
@@ -371,6 +371,32 @@
         const escapeHTML = str => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
         const sanitize   = (str, max = 100) => typeof str !== 'string' ? '' : str.trim().replace(/<[^>]*>?/gm, '').substring(0, max);
         const parseVE    = val => { if (typeof val === 'number') return val; if (!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
+
+        // ── Helper: subir precio a comunidad con upsert (sin duplicados) ─────
+        // ID = producto + supermercado normalizados → siempre sobreescribe el mismo doc
+        function normalizarIdComunidad(producto, supermercado) {
+            return (producto + '__' + supermercado)
+                .toLowerCase()
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_áéíóúüñ]/g, '')
+                .substring(0, 200);
+        }
+
+        async function subirAComunidad(producto, precioUSD, unidad, supermercado) {
+            if (!currentUser || !producto || precioUSD <= 0) return;
+            try {
+                const docId  = normalizarIdComunidad(producto, supermercado);
+                const docRef = doc(db, "productos_comunidad", docId);
+                await setDoc(docRef, {
+                    producto,
+                    precioUSD,
+                    unidad: unidad || "und",
+                    supermercado: supermercado || "N/A",
+                    fecha: new Date(),
+                    reportadoPor: sanitize(currentUser.displayName.split(' ')[0], 15)
+                }, { merge: false }); // sobreescribe siempre con el precio más reciente
+            } catch(e) { /* silencioso */ }
+        }
 
         // ── Modo de precio ────────────────────────────────────────────────────
         window.setPriceMode = function(mode) {
@@ -577,6 +603,11 @@
             localStorage.setItem('mercadoVE_carrito_v2', JSON.stringify(carrito));
             localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value);
             localStorage.setItem('mercadoVE_tasaGuardada', document.getElementById('tasaBCVInput').value);
+            // MEJORA 7: guardar último supermercado usado
+            const store = document.getElementById('storeName').value;
+            if (store && store !== "No especificado") {
+                localStorage.setItem('mercadoVE_ultimoStore', store);
+            }
         };
 
         window.cargarLocal = function() {
@@ -586,6 +617,9 @@
             if (tb) document.getElementById('tasaBinanceInput').value = tb.replace('.', ',');
             const tg = localStorage.getItem('mercadoVE_tasaGuardada');
             if (tg) { document.getElementById('tasaBCVInput').value = tg.replace('.', ','); tasaActual = parseFloat(tg); }
+            // MEJORA 7: pre-rellenar último supermercado
+            const us = localStorage.getItem('mercadoVE_ultimoStore');
+            if (us) document.getElementById('storeName').value = us;
         };
 
         window.vaciarLista = function(sinP = false) {
@@ -654,15 +688,9 @@
             item.unitPrice = item.qty > 0 ? newPrice / item.qty : newPrice;
             window.renderCarrito(); window.guardarLocal();
 
-            // Reportar a comunidad si aplica
-            if (item.isCommunity && newPrice > 0 && prev === '') {
-                try {
-                    await addDoc(collection(db, "productos_comunidad"), {
-                        producto: item.name, precioUSD: newPrice, unidad: item.unit || "und",
-                        supermercado: item.store, fecha: new Date(),
-                        reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo"
-                    });
-                } catch(e) {}
+            // Reportar a comunidad si aplica (upsert, sin duplicados)
+            if (item.isCommunity && newPrice > 0) {
+                await subirAComunidad(item.name, newPrice, item.unit, item.store);
             }
         };
 
@@ -678,6 +706,8 @@
             const unit   = document.getElementById('itemUnit').value || 'und';
             const rawPrice = parseVE(document.getElementById('itemPrice').value);
             const store  = document.getElementById('storeName').value || "No especificado";
+            // MEJORA 7: recordar supermercado para la próxima sesión
+            if (store && store !== "No especificado") localStorage.setItem('mercadoVE_ultimoStore', store);
 
             if (!aisle || (aisle !== "OTRO_PASILLO" && !cat)) return alert("Selecciona un pasillo y producto.");
             if (!bCat) return alert("Selecciona una marca.");
@@ -705,32 +735,57 @@
             }
             // ────────────────────────────────────────────────────────────────
 
+            // ── MEJORA 3: Detección de duplicados ───────────────────────────
+            const duplicado = carrito.find(i => i.name === fName && i.store === store);
+            if (duplicado) {
+                const accion = confirm(
+                    `⚠️ "${fName}" ya está en tu lista.\n\n` +
+                    `Cantidad actual: ${duplicado.qty} ${duplicado.unit || 'und'}\n\n` +
+                    `¿Sumar la nueva cantidad a la existente?\n` +
+                    `(Cancelar = agregar como ítem separado)`
+                );
+                if (accion) {
+                    const nuevaQty = duplicado.qty + qty;
+                    if (finalPrice > 0) {
+                        const precioUnitRef = duplicado.unitPrice || (duplicado.price > 0 ? duplicado.price / duplicado.qty : 0);
+                        duplicado.price = precioUnitRef * nuevaQty;
+                        duplicado.unitPrice = precioUnitRef;
+                    }
+                    duplicado.qty = nuevaQty;
+                    window.renderCarrito(); window.guardarLocal();
+                    mostrarToast(`✅ Cantidad actualizada: ${nuevaQty} ${unit}`);
+                    limpiarFormulario();
+                    return;
+                }
+            }
+            // ────────────────────────────────────────────────────────────────
+
             carrito.push({
                 id: Date.now(),
                 name: fName,
-                price: finalPrice,      // ← siempre el TOTAL del ítem
-                unitPrice: unitPrice,   // ← referencia del precio por unidad
+                price: finalPrice,
+                unitPrice: unitPrice,
                 qty,
                 unit,
                 store,
-                qtyMode: priceMode,     // guardamos cómo se calculó
+                qtyMode: priceMode,
                 isCommunity: aisle !== "OTRO_PASILLO" && cat !== "OTRO"
             });
 
             window.renderCarrito(); window.guardarLocal();
+            mostrarToast(`✅ ${fName} agregado`);
 
-            // Subir a comunidad si aplica
-            if (carrito[carrito.length - 1].isCommunity && finalPrice > 0) {
-                try {
-                    await addDoc(collection(db, "productos_comunidad"), {
-                        producto: fName, precioUSD: finalPrice, unidad: unit,
-                        supermercado: store, fecha: new Date(),
-                        reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo"
-                    });
-                } catch(e) {}
+            // Subir a comunidad (upsert, sin duplicados)
+            const itemRecienAgregado = carrito[carrito.length - 1];
+            if (itemRecienAgregado.isCommunity && finalPrice > 0) {
+                await subirAComunidad(fName, finalPrice, unit, store);
             }
 
-            // Limpiar campos (excepto pasillo, supermercado y marca para rapidez)
+            limpiarFormulario();
+        };
+
+        // ── Limpieza del formulario (extraída para reuso) ─────────────────────
+        function limpiarFormulario() {
             document.getElementById('itemCat').value = "";
             document.getElementById('itemCat').innerHTML = '<option value="" disabled selected>📦 Selecciona un Producto...</option>';
             document.getElementById('itemCat').disabled = true;
@@ -742,8 +797,8 @@
             document.getElementById('itemUnit').value = 'und';
             document.getElementById('itemPrice').value = '';
             document.getElementById('price-preview').textContent = '';
-            window.setPriceMode('total'); // reset a modo por defecto
-        };
+            window.setPriceMode('total');
+        }
 
         window.deleteItem = function(id) { carrito = carrito.filter(i => i.id !== id); window.renderCarrito(); window.guardarLocal(); };
 
@@ -943,6 +998,10 @@
         window.inicializarCatalogos();
         window.cargarLocal();
         window.fetchRates();
+        // MEJORA 2: refrescar tasas cada 30 minutos en background (sin molestar al usuario)
+        setInterval(() => {
+            window.fetchRates();
+        }, 30 * 60 * 1000);
     </script>
 </body>
 </html>
