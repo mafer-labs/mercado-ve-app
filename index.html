@@ -12,9 +12,9 @@
     <style>
         body { overflow-x: hidden; } 
         .qty-unit-box { display: flex; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-input); flex: 1 1 45%; }
-        .qty-input { width: 50%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
+        .qty-input { width: 40%; border: none; padding: 10px; text-align: center; background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px; }
         .qty-input:focus { outline: none; }
-        .unit-select { width: 50%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 5px;}
+        .unit-select { width: 60%; border: none; border-left: 1px solid var(--border-color); background: transparent; color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 8px;}
         .unit-select:focus { outline: none; }
         #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
         #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
@@ -36,6 +36,7 @@
             <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
             <ul>
                 <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco.</li>
+                <li><strong>Empaques Exactos:</strong> Si compras 0.4kg de queso, deja la cantidad en 1 y escribe "0.4 kg" en la unidad.</li>
                 <li><strong>Comunidad:</strong> Busca productos en Explorar y llévalos a tu calculadora.</li>
                 <li><strong>Offline:</strong> Esta app funciona casi toda sin internet para ahorrar tus datos.</li>
             </ul>
@@ -136,9 +137,15 @@
                 <div style="display: flex; gap: 8px; width: 100%;">
                     <div class="qty-unit-box">
                         <input type="text" inputmode="decimal" id="itemQty" class="qty-input" placeholder="Cant." value="1">
-                        <select id="itemUnit" class="unit-select">
-                            <option value="und">und</option><option value="kg">kg</option><option value="g">g</option><option value="L">L</option><option value="cartón">cartón</option>
-                        </select>
+                        <input type="text" id="itemUnit" class="unit-select" list="unit-options" placeholder="und" value="und">
+                        <datalist id="unit-options">
+                            <option value="und">
+                            <option value="kg">
+                            <option value="gr">
+                            <option value="L">
+                            <option value="cartón">
+                            <option value="1/2 cartón">
+                        </datalist>
                     </div>
                     <input type="text" inputmode="decimal" id="itemPrice" class="input-base" placeholder="Precio $ (x 1)" style="flex: 1 1 45%;">
                 </div>
@@ -210,12 +217,11 @@
         const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
         const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
 
-        // === CAPTURAR LINK MÁGICO ===
         const params = new URLSearchParams(window.location.search);
         let pendingImport = params.get('import') || sessionStorage.getItem('pendingImport');
         if (params.get('import')) {
             sessionStorage.setItem('pendingImport', params.get('import'));
-            window.history.replaceState({}, document.title, window.location.pathname); // Limpiamos la URL visualmente
+            window.history.replaceState({}, document.title, window.location.pathname); 
         }
 
         window.procesarImportacion = function(importData) {
@@ -242,7 +248,6 @@
             }
         };
 
-        // === LOGICA DE ADMIN OCULTA ===
         window.handleAdminClick = function() {
             const adminEmail = 'mariac.assistant@gmail.com'; 
             if (currentUser && currentUser.email === adminEmail) {
@@ -284,13 +289,9 @@
                 await updateDoc(doc(db, "pagos_pendientes", payId), { estado: "completado" });
                 mostrarToast("🚀 Usuario activado correctamente");
                 window.loadAdminPayments();
-            } catch(e) { 
-                console.error(e);
-                alert("Error al aprobar: " + e.message); 
-            }
+            } catch(e) { alert("Error al aprobar: " + e.message); }
         };
 
-        // === COMPARTIR WHATSAPP ===
         window.compartirLista = function(historialId = null) {
             let lista = []; let nombre = "Mi Mercado";
             if (historialId) {
@@ -307,16 +308,13 @@
             lista.forEach(i => {
                 let sub = i.price * i.qty; total += sub;
                 texto += `▪️ ${i.qty.toString().replace('.',',')} ${i.unit || 'und'} ${i.name} - $${sub.toFixed(2)}\n`;
-                // Compactamos la data para el enlace mágico
                 compactData.push({n: i.name, p: i.price, q: i.qty, u: i.unit});
             });
             texto += `\n💰 *Suma USD:* $${total.toFixed(2)}`;
             
-            // Generar Link Mágico
             try {
                 let dataStr = JSON.stringify(compactData);
                 let encoded = btoa(unescape(encodeURIComponent(dataStr)));
-                // URL de tu app en GitHub
                 let link = "https://mafer-labs.github.io/mercado-ve-app/?import=" + encoded;
                 texto += `\n\n👇 Toca aquí para importar esta lista a tu app CuentaClara:\n${link}`;
             } catch(e) { console.error("Error al crear link"); }
@@ -325,7 +323,6 @@
             window.open(waUrl, '_blank');
         };
 
-        // === FUNCIONES GENERALES ===
         window.showPremiumModal = function() { document.getElementById('premium-modal').style.display = 'flex'; };
         window.reportarPago = async function() {
             if(!currentUser) return;
@@ -354,7 +351,6 @@
                 } catch(e) { userPlan = "gratis"; }
                 document.getElementById('btn-go-premium').style.display = (userPlan === "gratis") ? 'flex' : 'none';
                 
-                // Si había un enlace mágico esperando a que cargara el plan, lo procesamos
                 if (pendingImport) {
                     window.procesarImportacion(pendingImport);
                     sessionStorage.removeItem('pendingImport');
@@ -393,13 +389,54 @@
         window.cargarLocal = function() { if(localStorage.getItem('mercadoVE_carrito_v2')) { carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2')); window.renderCarrito(); } if(localStorage.getItem('mercadoVE_tasaBinance')) { document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance').replace('.', ','); } if(localStorage.getItem('mercadoVE_tasaGuardada')) { let st = localStorage.getItem('mercadoVE_tasaGuardada'); document.getElementById('tasaBCVInput').value = st.replace('.', ','); tasaActual = parseFloat(st); } };
         window.vaciarLista = function(sinP = false) { if(sinP || confirm("¿Vaciar calculadora?")) { carrito = []; listaActualId = null; window.renderCarrito(); window.guardarLocal(); } };
 
+        // === BOTONES DE EDITAR Y ELIMINAR RESTAURADOS ===
         window.renderCarrito = function() {
             const list = document.getElementById('list'); list.innerHTML = ''; let tUSD = 0;
             carrito.forEach(item => {
                 const itemTotal = item.price * item.qty; tUSD += itemTotal; const li = document.createElement('li'); li.className = "calc-item";
-                li.innerHTML = `<div style="display:flex; flex-direction:column;"><span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:normal;">${item.unit || 'und'}</span> ${item.name}</span><span class="item-store text-muted">📍 ${item.store}</span></div><div style="display:flex; align-items:center;">${item.price > 0 ? `<span class="item-price">$${itemTotal.toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}<button class="btn-delete" onclick="window.deleteItem(${item.id})">✕</button></div>`; list.appendChild(li);
+                li.innerHTML = `
+                    <div style="display:flex; flex-direction:column;">
+                        <span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">${item.unit || 'und'}</span> ${item.name}</span>
+                        <span class="item-store text-muted">📍 ${item.store}</span>
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        ${item.price > 0 ? `<span class="item-price" style="font-weight:700;">$${itemTotal.toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}
+                        <button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;" title="Editar Precio">✏️</button>
+                        <button class="btn-delete" onclick="window.deleteItem(${item.id})" style="margin-left:10px;">✕</button>
+                    </div>`; 
+                list.appendChild(li);
             });
             totalUSD = tUSD; window.updateTotals();
+        };
+
+        // === LÓGICA DE EDICIÓN RESTAURADA ===
+        window.editPrice = async function(id) { 
+            let item = carrito.find(i => i.id === id); 
+            if(!item) return; 
+            let prevPrice = item.price > 0 ? item.price.toString().replace('.', ',') : ''; 
+            let newPriceStr = prompt(`Precio unitario en $ para:\n${item.name} (Por ${item.unit || 'und'})`, prevPrice); 
+            if(newPriceStr !== null && newPriceStr.trim() !== '') { 
+                let newPrice = parseVE(newPriceStr); 
+                if(!isNaN(newPrice) && newPrice >= 0) { 
+                    item.price = newPrice; 
+                    window.renderCarrito(); 
+                    window.guardarLocal(); 
+                    if(item.isCommunity && newPrice > 0 && prevPrice === '') { 
+                        try { 
+                            await addDoc(collection(db, "productos_comunidad"), { 
+                                producto: item.name, 
+                                precioUSD: newPrice, 
+                                unidad: item.unit || "und", 
+                                supermercado: item.store, 
+                                fecha: new Date(), 
+                                reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo" 
+                            }); 
+                        } catch(e) {} 
+                    } 
+                } else {
+                    alert("Precio inválido."); 
+                }
+            } 
         };
 
         window.addItem = async function() {
@@ -442,7 +479,6 @@
             historialNube.forEach(compra => { 
                 const div = document.createElement('div'); div.className = 'historial-card'; 
                 
-                // SE AGREGÓ EL BOTÓN COMPARTIR AL HISTORIAL
                 let btnCompartir = `<button onclick="window.compartirLista('${compra.id}')" style="background:transparent; color:#25D366; border:1px solid #25D366; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600; margin-right:8px;">📲 Compartir</button>`;
                 let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar</button>` : ''; 
                 
