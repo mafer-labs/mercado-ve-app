@@ -10,45 +10,137 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <style>
-        body { overflow-x: hidden; } 
-        #ptr { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1); padding: 15px; font-size: 13px; color: var(--text-muted); display: none; align-items: center; justify-content: center; gap: 8px; font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;}
-        #toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--primary-green); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2); animation: fadeInOut 2.5s; white-space: nowrap;}
-        @keyframes fadeInOut { 0% { opacity: 0; transform: translate(-50%, 10px); } 15% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
-        
-        .premium-btn { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; border: none; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 5px rgba(245,158,11,0.3); }
-        .paywall-box { background: var(--bg-rates); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-top: 15px; text-align: left; }
-        .paywall-input { width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-family: 'Inter', sans-serif; font-size: 14px; margin-top: 8px; background: var(--bg-input); color: var(--text-main); box-sizing: border-box; }
-        .locked-btn { background: var(--bg-rates); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .admin-card { background: var(--bg-input); border: 1px solid var(--border-color); padding: 12px; border-radius: 10px; margin-bottom: 10px; font-size: 13px; color: var(--text-main); }
+        body { overflow-x: hidden; }
+
+        /* Caja de cantidad + unidad */
+        .qty-unit-box {
+            display: flex;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-input);
+            flex: 1 1 45%;
+            overflow: hidden;
+        }
+        .qty-input {
+            width: 40%; border: none; padding: 10px;
+            text-align: center; background: transparent;
+            color: var(--text-main); font-family: 'Inter', sans-serif; font-size: 14px;
+        }
+        .qty-input:focus { outline: none; }
+        .unit-input {
+            width: 60%; border: none; border-left: 1px solid var(--border-color);
+            background: transparent; color: var(--text-main);
+            font-family: 'Inter', sans-serif; font-size: 13px; padding: 0 8px;
+        }
+        .unit-input:focus { outline: none; }
+
+        /* Toggle precio por unidad vs precio total */
+        .price-mode-toggle {
+            display: flex;
+            background: var(--bg-rates);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 100%;
+        }
+        .price-mode-toggle button {
+            flex: 1; border: none; padding: 8px 4px;
+            background: transparent; color: var(--text-muted);
+            font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600;
+            cursor: pointer; transition: 0.15s; line-height: 1.3;
+        }
+        .price-mode-toggle button.active {
+            background: var(--primary-green); color: white;
+        }
+
+        /* Resumen de precio calculado */
+        #price-preview {
+            font-size: 12px; color: var(--text-muted);
+            text-align: right; width: 100%;
+            padding: 2px 4px 0 0;
+            min-height: 16px;
+        }
+
+        /* Pull to refresh */
+        #ptr {
+            position: fixed; top: 0; left: 0; width: 100%; z-index: 1000;
+            background: var(--bg-card); box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            padding: 15px; font-size: 13px; color: var(--text-muted);
+            display: none; align-items: center; justify-content: center; gap: 8px;
+            font-weight: 600; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;
+        }
+
+        /* Toast */
+        #toast {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: var(--primary-green); color: white; padding: 10px 20px;
+            border-radius: 20px; font-size: 13px; font-weight: 600;
+            display: none; z-index: 2000; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            animation: fadeInOut 2.5s; white-space: nowrap;
+        }
+        @keyframes fadeInOut {
+            0%   { opacity: 0; transform: translate(-50%, 10px); }
+            15%  { opacity: 1; transform: translate(-50%, 0); }
+            85%  { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -10px); }
+        }
+
+        .premium-btn {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff;
+            border: none; padding: 5px 12px; border-radius: 20px;
+            font-weight: 700; font-size: 12px; cursor: pointer;
+            display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 2px 5px rgba(245,158,11,0.3);
+        }
+        .paywall-box {
+            background: var(--bg-rates); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 15px; margin-top: 15px;
+        }
+        .paywall-input {
+            width: 100%; border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 10px; font-family: 'Inter', sans-serif; font-size: 14px; margin-top: 8px;
+            background: var(--bg-input); color: var(--text-main); box-sizing: border-box;
+        }
+        .locked-btn {
+            background: var(--bg-rates); color: var(--text-muted);
+            border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 4px 8px; font-weight: bold; cursor: pointer; font-size: 14px;
+        }
+        .admin-card {
+            background: var(--bg-input); border: 1px solid var(--border-color);
+            padding: 12px; border-radius: 10px; margin-bottom: 10px;
+            font-size: 13px; color: var(--text-main);
+        }
     </style>
 </head>
 <body>
     <div id="ptr"><span id="ptr-icon">⬇️</span> <span id="ptr-text">Desliza para actualizar...</span></div>
     <div id="toast">✅ Acción exitosa</div>
 
+    <!-- Modal Ayuda -->
     <div id="help-modal" class="modal-overlay">
         <div class="modal-content">
-            <h3 style="color: var(--primary-blue); font-size: 18px; display: flex; align-items: center; gap: 8px;">ℹ️ Cómo usar CuentaClara</h3>
+            <h3 style="color: var(--primary-blue); font-size: 18px;">ℹ️ Cómo usar CuentaClara</h3>
             <ul>
-                <li><strong>Listas Borrador:</strong> Agrega productos dejando el precio en blanco.</li>
-                <li><strong>Empaques Exactos:</strong> Si compras 1 paquete de 400gr, deja el Multiplicador en 1 y escribe "400gr" en Presentación.</li>
-                <li><strong>Productos por Peso:</strong> Si compras Queso, pon 0.4 en Multiplicador y "kg" en Presentación.</li>
-                <li><strong>Offline:</strong> Esta app funciona casi toda sin internet para ahorrar tus datos.</li>
+                <li><strong>Precio Total:</strong> Úsalo cuando compras un solo empaque o una cantidad fija (ej: 400gr de queso por $2.50). Escribe el precio que pagarás en caja.</li>
+                <li><strong>Precio x Und:</strong> Úsalo cuando compras múltiples unidades del mismo producto al mismo precio (ej: 3 latas de atún a $1.50 c/u). La app multiplica automáticamente.</li>
+                <li><strong>Listas Borrador:</strong> Agrega productos sin precio — aparecerán como "Pendiente ⏳". Toca ✏️ en el pasillo para rellenarlos.</li>
+                <li><strong>Comunidad:</strong> Busca precios reales reportados por otros usuarios en la pestaña Explorar.</li>
             </ul>
             <button onclick="document.getElementById('help-modal').style.display='none'" class="btn-main" style="margin-top:20px;">¡Entendido!</button>
         </div>
     </div>
 
+    <!-- Modal Admin -->
     <div id="admin-modal" class="modal-overlay">
         <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
             <h3 style="color: var(--primary-green); border-bottom: 2px solid var(--primary-green); padding-bottom: 10px;">Panel Admin 🛠️</h3>
-            <div id="admin-list" style="margin-top: 20px;">
-                <p class="text-muted" style="text-align: center;">Buscando reportes...</p>
-            </div>
+            <div id="admin-list" style="margin-top: 20px;"><p class="text-muted" style="text-align: center;">Buscando reportes...</p></div>
             <button onclick="document.getElementById('admin-modal').style.display='none'" class="btn-main" style="margin-top:20px;">Cerrar Panel</button>
         </div>
     </div>
 
+    <!-- Modal Premium -->
     <div id="premium-modal" class="modal-overlay">
         <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
             <div style="text-align: center;">
@@ -56,37 +148,33 @@
                 <h3 style="color: #f59e0b; font-size: 22px; margin-top: 5px;">Sube a Premium</h3>
                 <p class="text-muted" style="font-size: 13px;">Apoya el proyecto y desbloquea todo el poder de CuentaClara por solo <b>$1.50 al mes</b>.</p>
             </div>
-            
             <ul style="font-size: 13px; margin: 15px 0; padding-left: 20px; color: var(--text-main);">
                 <li>✅ <b>Multi-Listas Nube:</b> Guarda listas ilimitadas.</li>
-                <li>✅ <b>Importación Directa:</b> Agrega con 1 toque desde la comunidad (Sin candados 🔒).</li>
-                <li>✅ <b>Enlace Mágico:</b> Recibe y carga listas completas de tus familiares con un solo clic.</li>
+                <li>✅ <b>Importación Directa:</b> Agrega con 1 toque desde la comunidad.</li>
+                <li>✅ <b>Enlace Mágico:</b> Recibe y carga listas completas con un clic.</li>
             </ul>
-
             <div class="paywall-box">
                 <h4 style="margin:0 0 10px 0; font-size: 14px;">1️⃣ Realiza tu pago:</h4>
                 <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px;">
-                    <span class="text-muted">Pago Móvil:</span>
-                    <b>0412-1234567 • 0102 • 12.345.678</b>
+                    <span class="text-muted">Pago Móvil:</span><b>0412-1234567 • 0102 • 12.345.678</b>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 12px;">
-                    <span class="text-muted">Zelle:</span>
-                    <b>pagos@cuentaclara.app</b>
+                    <span class="text-muted">Zelle:</span><b>pagos@cuentaclara.app</b>
                 </div>
             </div>
-
             <div class="paywall-box" style="margin-top: 10px;">
                 <h4 style="margin:0 0 10px 0; font-size: 14px;">2️⃣ Reporta tu pago:</h4>
                 <input type="text" id="pay-ref" class="paywall-input" placeholder="Referencia o Nombre">
-                <button onclick="window.reportarPago()" class="btn-main" style="margin-top:10px; background: #f59e0b; color: #fff;" id="btn-enviar-pago">Enviar Reporte 🚀</button>
+                <button onclick="window.reportarPago()" class="btn-main" style="margin-top:10px; background: #f59e0b;" id="btn-enviar-pago">Enviar Reporte 🚀</button>
             </div>
-
             <button onclick="document.getElementById('premium-modal').style.display='none'" style="width:100%; margin-top:15px; padding:10px; background:transparent; border:none; color:var(--text-muted); font-weight:600;">Quizás más tarde</button>
         </div>
     </div>
 
+    <!-- Login -->
     <div id="login-screen">
         <h1 style="font-size: 36px; color: var(--primary-green); margin-bottom: 10px; font-weight: 800;">CuentaClara</h1>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Tu mercado al mejor cambio.</p>
         <button class="login-btn" onclick="window.loginConGoogle()">
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" style="width: 24px;">
             Continuar con Google
@@ -102,65 +190,88 @@
                 <button onclick="window.logout()" class="btn-icon" style="color: var(--danger-red);">Salir</button>
             </div>
         </div>
-        
+
+        <!-- Tasas -->
         <div class="rates-box">
             <div class="rate-row">
                 <span class="rate-label text-blue">🇻🇪 Tasa BCV ✏️</span>
                 <div class="rate-input-container">
-                    <span class="text-muted" style="font-size: 11px;">Bs.</span> 
+                    <span class="text-muted" style="font-size: 11px;">Bs.</span>
                     <input type="text" inputmode="decimal" id="tasaBCVInput" class="rate-input text-blue" placeholder="36,50" oninput="window.updateRatesManual()">
                 </div>
             </div>
             <div class="rate-row">
                 <span class="rate-label text-green">🔄 Venta USD ✏️</span>
                 <div class="rate-input-container">
-                    <span class="text-muted" style="font-size: 11px;">Bs.</span> 
+                    <span class="text-muted" style="font-size: 11px;">Bs.</span>
                     <input type="text" inputmode="decimal" id="tasaBinanceInput" class="rate-input text-green" placeholder="41,50" oninput="window.updateRatesManual()">
                 </div>
             </div>
         </div>
 
+        <!-- Tab: Calculadora -->
         <div id="tab-lista" class="tab-content active">
             <div class="input-group">
                 <datalist id="cat-supermercados"></datalist>
-                <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()" style="font-weight: 600;"><option value="" disabled selected>🏪 Selecciona un Pasillo...</option></select>
-                <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled><option value="" disabled selected>📦 Primero elige un pasillo...</option></select>
+
+                <select id="itemAisle" class="input-base input-full" onchange="window.cargarProductosPorCategoria()" style="font-weight: 600;">
+                    <option value="" disabled selected>🏪 Selecciona un Pasillo...</option>
+                </select>
+
+                <select id="itemCat" class="input-base input-full" onchange="window.verificarTipoProducto()" disabled>
+                    <option value="" disabled selected>📦 Primero elige un pasillo...</option>
+                </select>
                 <input type="text" id="itemNameLibre" class="input-base input-full" placeholder="Producto personal..." style="display:none;">
-                <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()"><option value="" disabled selected>🏷️ Marca...</option></select>
+
+                <select id="itemBrand" class="input-base input-brand" onchange="window.verificarMarca()">
+                    <option value="" disabled selected>🏷️ Marca...</option>
+                </select>
                 <input type="text" id="itemBrandLibre" class="input-base input-full" placeholder="Escribe la marca..." style="display:none;">
-                
-                <div class="calc-row">
-                    <div class="calc-col">
-                        <span class="calc-label">Mult.</span>
-                        <input type="text" inputmode="decimal" id="itemQty" class="input-base calc-input" placeholder="1" value="1">
-                    </div>
-                    
-                    <div class="calc-col calc-col-wide">
-                        <span class="calc-label">Presentación</span>
-                        <input type="text" id="itemUnit" class="input-base calc-input" list="unit-options" placeholder="Ej: 400gr" value="und">
+
+                <!-- Cantidad + Unidad libre -->
+                <div style="display: flex; gap: 8px; width: 100%;">
+                    <div class="qty-unit-box">
+                        <input type="text" inputmode="decimal" id="itemQty" class="qty-input"
+                               placeholder="Cant." value="1"
+                               oninput="window.updatePricePreview()">
+                        <input type="text" id="itemUnit" class="unit-input"
+                               list="unit-options" placeholder="und" value="und"
+                               oninput="window.updatePricePreview()">
                         <datalist id="unit-options">
                             <option value="und">
                             <option value="kg">
                             <option value="gr">
                             <option value="L">
+                            <option value="ml">
                             <option value="cartón">
                             <option value="1/2 cartón">
-                            <option value="paquete">
+                            <option value="paq">
                         </datalist>
                     </div>
-                    
-                    <div class="calc-col">
-                        <span class="calc-label">Precio ($)</span>
-                        <input type="text" inputmode="decimal" id="itemPrice" class="input-base calc-input" placeholder="Total">
-                    </div>
+                    <input type="text" inputmode="decimal" id="itemPrice" class="input-base"
+                           placeholder="Precio $" style="flex: 1 1 45%;"
+                           oninput="window.updatePricePreview()">
                 </div>
-                
+
+                <!-- Toggle: modo de precio -->
+                <div class="price-mode-toggle">
+                    <button id="btn-modo-total" class="active" onclick="window.setPriceMode('total')">
+                        💰 Precio Total<br>
+                        <span style="font-weight:400; font-size:11px;">(lo que pagarás)</span>
+                    </button>
+                    <button id="btn-modo-unit" onclick="window.setPriceMode('unit')">
+                        ✖️ Precio x Und<br>
+                        <span style="font-weight:400; font-size:11px;">(multiplica por cant.)</span>
+                    </button>
+                </div>
+                <div id="price-preview"></div>
+
                 <input type="text" id="storeName" class="input-base input-full" placeholder="📍 Sede o Supermercado" list="cat-supermercados">
                 <button class="btn-main" onclick="window.addItem()">Agregar a la lista</button>
             </div>
-            
+
             <ul id="list"></ul>
-            
+
             <div class="total-box">
                 <p class="total-box-row">Suma en USD: <b class="text-main">$<span id="totalUSD">0.00</span></b></p>
                 <h4 class="total-box-bcv">Pagar en caja: Bs <span id="totalVES">0.00</span></h4>
@@ -168,7 +279,7 @@
                 <h3 class="total-box-usdt"><span id="totalUSDT">0.00</span> <span style="font-size: 14px; color: var(--text-muted);">USD</span></h3>
                 <p id="ahorroText" class="ahorro-text"></p>
             </div>
-            
+
             <div class="action-btns" style="display: flex; gap: 8px; margin-top: 15px; flex-wrap: wrap;">
                 <button class="btn-secondary blue" onclick="window.guardarHistorialNube()" style="flex: 1;">☁️ Guardar</button>
                 <button class="btn-secondary" onclick="window.compartirLista()" style="flex: 1; background: #25D366; color: white; border: none; font-weight: 700;">📲 Compartir</button>
@@ -176,12 +287,17 @@
             </div>
         </div>
 
+        <!-- Tab: Explorar -->
         <div id="tab-precios" class="tab-content">
             <h3 style="margin-top: 0; margin-bottom: 5px;">Guía de Precios</h3>
-            <input type="text" id="searchCommunity" class="input-base input-full" placeholder="🔍 Buscar producto o súper..." oninput="window.filterCommunity()" style="margin-bottom: 15px; width: 100%;">
+            <input type="text" id="searchCommunity" class="input-base input-full"
+                   placeholder="🔍 Buscar producto o súper..."
+                   oninput="window.filterCommunity()"
+                   style="margin-bottom: 15px; width: 100%;">
             <div id="precios-list"><p style="text-align: center;" class="text-muted">Cargando precios...</p></div>
         </div>
 
+        <!-- Tab: Historial -->
         <div id="tab-historial" class="tab-content">
             <h3 style="margin-top: 0; margin-bottom: 5px;">Mi Historial</h3>
             <div id="historial-list"></div>
@@ -198,15 +314,35 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, query, doc, deleteDoc, updateDoc, getDoc, setDoc, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=6";
+        import { catalogoPorCategorias, supermercadosFijos, marcasOficiales } from "./catalogo.js?v=7";
 
-        // === DESLIZAR PARA ACTUALIZAR (Pull-to-refresh) ===
-        let pStart = { y: 0 }; let pCurrent = { y: 0 }; let isPulling = false;
-        const ptr = document.getElementById('ptr'); const ptrText = document.getElementById('ptr-text'); const ptrIcon = document.getElementById('ptr-icon');
+        // ── Pull to refresh ──────────────────────────────────────────────────
+        let pStart = { y: 0 }, pCurrent = { y: 0 }, isPulling = false;
+        const ptr = document.getElementById('ptr');
+        const ptrText = document.getElementById('ptr-text');
+        const ptrIcon = document.getElementById('ptr-icon');
         document.addEventListener('touchstart', e => { if (window.scrollY === 0) { pStart.y = e.touches[0].clientY; isPulling = true; } }, {passive: true});
-        document.addEventListener('touchmove', e => { if (!isPulling) return; pCurrent.y = e.touches[0].clientY; let diff = pCurrent.y - pStart.y; if (diff > 10 && window.scrollY === 0) { ptr.style.display = 'flex'; if (diff > 100) { ptrText.textContent = "Suelta para actualizar"; ptrIcon.textContent = "🔄"; } else { ptrText.textContent = "Desliza para actualizar..."; ptrIcon.textContent = "⬇️"; } } }, {passive: true});
-        document.addEventListener('touchend', e => { if (!isPulling) return; isPulling = false; let diff = pCurrent.y - pStart.y; if (diff > 100 && window.scrollY === 0) { ptrText.textContent = "Actualizando..."; ptrIcon.textContent = "⏳"; setTimeout(() => { window.location.href = window.location.href.split('?')[0] + '?v=' + new Date().getTime(); }, 300); } else { ptr.style.display = 'none'; } });
+        document.addEventListener('touchmove', e => {
+            if (!isPulling) return;
+            pCurrent.y = e.touches[0].clientY;
+            const diff = pCurrent.y - pStart.y;
+            if (diff > 10 && window.scrollY === 0) {
+                ptr.style.display = 'flex';
+                ptrText.textContent = diff > 100 ? "Suelta para actualizar" : "Desliza para actualizar...";
+                ptrIcon.textContent = diff > 100 ? "🔄" : "⬇️";
+            }
+        }, {passive: true});
+        document.addEventListener('touchend', () => {
+            if (!isPulling) return;
+            isPulling = false;
+            const diff = pCurrent.y - pStart.y;
+            if (diff > 100 && window.scrollY === 0) {
+                ptrText.textContent = "Actualizando..."; ptrIcon.textContent = "⏳";
+                setTimeout(() => { window.location.href = window.location.href.split('?')[0] + '?v=' + Date.now(); }, 300);
+            } else { ptr.style.display = 'none'; }
+        });
 
+        // ── Firebase ─────────────────────────────────────────────────────────
         const firebaseConfig = {
             apiKey: "AIzaSyBqq-oNLwtX-VWvRm6zHZKcENX-LktTuaM",
             authDomain: "mercado-ve-db.firebaseapp.com",
@@ -216,59 +352,74 @@
             messagingSenderId: "147270255959",
             appId: "1:147270255959:web:48f9c14451153b17e6ea12"
         };
-
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const db  = getFirestore(app);
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
-        
-        let currentUser = null; let historialNube = []; let carrito = []; let totalUSD = 0; let tasaActual = 0; let listaActualId = null; let listaActualNombre = "";
-        let userPlan = "gratis"; let adminClicks = 0;
 
-        const escapeHTML = (str) => { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; };
-        const sanitize = (str, maxLen = 100) => { if (typeof str !== 'string') return ''; return str.trim().replace(/<[^>]*>?/gm, '').substring(0, maxLen); };
-        const parseVE = (val) => { if(typeof val === 'number') return val; if(!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
+        // ── Estado global ─────────────────────────────────────────────────────
+        let currentUser = null, historialNube = [], carrito = [];
+        let totalUSD = 0, tasaActual = 0;
+        let listaActualId = null, listaActualNombre = "";
+        let userPlan = "gratis", adminClicks = 0;
 
-        const params = new URLSearchParams(window.location.search);
-        let pendingImport = params.get('import') || sessionStorage.getItem('pendingImport');
-        if (params.get('import')) {
-            sessionStorage.setItem('pendingImport', params.get('import'));
-            window.history.replaceState({}, document.title, window.location.pathname); 
-        }
+        // Modo de precio: 'total' = el precio ingresado ES el total del ítem
+        //                 'unit'  = precio por unidad × cantidad
+        let priceMode = 'total';
 
-        window.procesarImportacion = function(importData) {
-            if (userPlan === "gratis") {
-                alert("🌟 ¡Te han compartido un 'Enlace Mágico'!\n\nPara importar esta lista con un solo toque y unirla a tu calculadora, necesitas CuentaClara Premium.");
-                window.showPremiumModal();
-                return;
-            }
-            try {
-                let decodedStr = decodeURIComponent(escape(atob(importData)));
-                let compactData = JSON.parse(decodedStr);
-                if (compactData && compactData.length > 0) {
-                    if (confirm("📲 ¡Han compartido una lista contigo!\n\n¿Deseas cargarla en tu calculadora? (Reemplazará lo que tienes actualmente)")) {
-                        carrito = compactData.map((i, idx) => ({
-                            id: Date.now() + idx, name: i.n, price: i.p, qty: i.q, unit: i.u || 'und', store: 'Importada'
-                        }));
-                        window.renderCarrito();
-                        window.guardarLocal();
-                        mostrarToast("✅ Lista importada con éxito");
-                    }
-                }
-            } catch(e) {
-                alert("El enlace mágico está dañado o es inválido.");
+        // ── Helpers ───────────────────────────────────────────────────────────
+        const escapeHTML = str => { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; };
+        const sanitize   = (str, max = 100) => typeof str !== 'string' ? '' : str.trim().replace(/<[^>]*>?/gm, '').substring(0, max);
+        const parseVE    = val => { if (typeof val === 'number') return val; if (!val) return 0; return parseFloat(val.toString().replace(',', '.')) || 0; };
+
+        // ── Modo de precio ────────────────────────────────────────────────────
+        window.setPriceMode = function(mode) {
+            priceMode = mode;
+            document.getElementById('btn-modo-total').classList.toggle('active', mode === 'total');
+            document.getElementById('btn-modo-unit').classList.toggle('active', mode === 'unit');
+            window.updatePricePreview();
+        };
+
+        // Muestra un preview del total calculado bajo el formulario
+        window.updatePricePreview = function() {
+            const qty    = parseVE(document.getElementById('itemQty').value) || 1;
+            const unit   = document.getElementById('itemUnit').value || 'und';
+            const price  = parseVE(document.getElementById('itemPrice').value);
+            const prev   = document.getElementById('price-preview');
+
+            if (!price) { prev.textContent = ''; return; }
+
+            if (priceMode === 'unit') {
+                const total = price * qty;
+                prev.innerHTML = `<span style="color:var(--primary-green); font-weight:600;">$${price.toFixed(2)} × ${qty} ${unit} = <b>$${total.toFixed(2)}</b></span>`;
+            } else {
+                prev.innerHTML = `<span style="color:var(--primary-blue); font-weight:600;">Total fijo: <b>$${price.toFixed(2)}</b> por ${qty} ${unit}</span>`;
             }
         };
 
+        // ── Importación via URL ───────────────────────────────────────────────
+        const params = new URLSearchParams(window.location.search);
+        let pendingImport = params.get('import') || sessionStorage.getItem('pendingImport');
+        if (params.get('import')) { sessionStorage.setItem('pendingImport', params.get('import')); window.history.replaceState({}, document.title, window.location.pathname); }
+
+        window.procesarImportacion = function(importData) {
+            if (userPlan === "gratis") { alert("🌟 Para importar listas necesitas CuentaClara Premium."); window.showPremiumModal(); return; }
+            try {
+                const decodedStr = decodeURIComponent(escape(atob(importData)));
+                const compactData = JSON.parse(decodedStr);
+                if (compactData && compactData.length > 0 && confirm("📲 ¡Han compartido una lista contigo!\n\n¿Deseas cargarla? (Reemplazará la actual)")) {
+                    carrito = compactData.map((i, idx) => ({ id: Date.now() + idx, name: i.n, price: i.p, qty: i.q, unit: i.u || 'und', store: 'Importada', priceIsTotal: true }));
+                    window.renderCarrito(); window.guardarLocal(); mostrarToast("✅ Lista importada");
+                }
+            } catch(e) { alert("El enlace mágico está dañado o es inválido."); }
+        };
+
+        // ── Admin ─────────────────────────────────────────────────────────────
         window.handleAdminClick = function() {
-            const adminEmail = 'mariac.assistant@gmail.com'; 
+            const adminEmail = 'mariac.assistant@gmail.com';
             if (currentUser && currentUser.email === adminEmail) {
                 adminClicks++;
-                if (adminClicks >= 5) {
-                    adminClicks = 0;
-                    document.getElementById('admin-modal').style.display = 'flex';
-                    window.loadAdminPayments();
-                }
+                if (adminClicks >= 5) { adminClicks = 0; document.getElementById('admin-modal').style.display = 'flex'; window.loadAdminPayments(); }
             }
         };
 
@@ -276,238 +427,522 @@
             const listEl = document.getElementById('admin-list');
             listEl.innerHTML = '<p class="text-muted">Buscando reportes...</p>';
             try {
-                const q = query(collection(db, "pagos_pendientes"), where("estado", "==", "pendiente"));
+                const q    = query(collection(db, "pagos_pendientes"), where("estado", "==", "pendiente"));
                 const snap = await getDocs(q);
-                if (snap.empty) return listEl.innerHTML = '<p class="text-green" style="text-align:center;">✅ ¡No hay pagos pendientes!</p>';
+                if (snap.empty) return listEl.innerHTML = '<p class="text-green" style="text-align:center;">✅ ¡Sin pagos pendientes!</p>';
                 listEl.innerHTML = '';
                 snap.forEach(payDoc => {
                     const data = payDoc.data();
-                    const card = document.createElement('div');
-                    card.className = 'admin-card';
-                    card.innerHTML = `
-                        <b>📧 ${data.email}</b><br>
-                        <span class="text-muted">Ref:</span> ${data.referencia}<br>
-                        <button onclick="window.approvePayment('${payDoc.id}', '${data.uid}')" style="margin-top:10px; width:100%; padding:8px; background:var(--primary-green); color:white; border:none; border-radius:5px; font-weight:700;">✅ Aprobar</button>
-                    `;
+                    const card = document.createElement('div'); card.className = 'admin-card';
+                    card.innerHTML = `<b>📧 ${data.email}</b><br><span class="text-muted">Ref:</span> ${data.referencia}<br>
+                        <button onclick="window.approvePayment('${payDoc.id}', '${data.uid}')" style="margin-top:10px; width:100%; padding:8px; background:var(--primary-green); color:white; border:none; border-radius:5px; font-weight:700;">✅ Aprobar</button>`;
                     listEl.appendChild(card);
                 });
-            } catch(e) { listEl.innerHTML = '<p class="text-red">Error al cargar pagos pendientes.</p>'; }
+            } catch(e) { listEl.innerHTML = '<p class="text-red">Error al cargar.</p>'; }
         };
 
         window.approvePayment = async function(payId, userId) {
-            if(!confirm("¿Aprobar este pago y activar Premium?")) return;
+            if (!confirm("¿Aprobar este pago y activar Premium?")) return;
             try {
                 await updateDoc(doc(db, "usuarios", userId), { plan: "premium" });
                 await updateDoc(doc(db, "pagos_pendientes", payId), { estado: "completado" });
-                mostrarToast("🚀 Usuario activado correctamente");
-                window.loadAdminPayments();
-            } catch(e) { alert("Error al aprobar: " + e.message); }
+                mostrarToast("🚀 Usuario activado"); window.loadAdminPayments();
+            } catch(e) { alert("Error: " + e.message); }
         };
 
+        // ── Compartir lista ───────────────────────────────────────────────────
         window.compartirLista = function(historialId = null) {
-            let lista = []; let nombre = "Mi Mercado";
+            let lista = [], nombre = "Mi Mercado";
             if (historialId) {
-                let compra = historialNube.find(c => c.id === historialId);
-                if(compra) { lista = compra.items_array; nombre = compra.nombre; }
+                const compra = historialNube.find(c => c.id === historialId);
+                if (compra) { lista = compra.items_array; nombre = compra.nombre; }
             } else {
                 if (carrito.length === 0) return alert("La calculadora está vacía.");
                 lista = carrito;
             }
-
             let texto = `📝 *Lista CuentaClara: ${nombre}*\n\n`;
-            let total = 0; let compactData = [];
-            
+            let total = 0, compactData = [];
             lista.forEach(i => {
-                let sub = i.price * i.qty; total += sub;
-                texto += `▪️ ${i.qty.toString().replace('.',',')} ${i.unit || 'und'} ${i.name} - $${sub.toFixed(2)}\n`;
-                compactData.push({n: i.name, p: i.price, q: i.qty, u: i.unit});
+                // El precio almacenado ya siempre es el total del ítem
+                total += i.price;
+                texto += `▪️ ${i.qty.toString().replace('.', ',')} ${i.unit || 'und'} ${i.name} — $${i.price.toFixed(2)}\n`;
+                compactData.push({ n: i.name, p: i.price, q: i.qty, u: i.unit });
             });
             texto += `\n💰 *Suma USD:* $${total.toFixed(2)}`;
-            
             try {
-                let dataStr = JSON.stringify(compactData);
-                let encoded = btoa(unescape(encodeURIComponent(dataStr)));
-                let link = "https://mafer-labs.github.io/mercado-ve-app/?import=" + encoded;
-                texto += `\n\n👇 Toca aquí para importar esta lista a tu app CuentaClara:\n${link}`;
-            } catch(e) { console.error("Error al crear link"); }
-
-            let waUrl = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(texto);
-            window.open(waUrl, '_blank');
+                const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(compactData))));
+                texto += `\n\n👇 Importar a CuentaClara:\nhttps://mafer-labs.github.io/mercado-ve-app/?import=${encoded}`;
+            } catch(e) {}
+            window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(texto), '_blank');
         };
 
+        // ── Premium / Pago ────────────────────────────────────────────────────
         window.showPremiumModal = function() { document.getElementById('premium-modal').style.display = 'flex'; };
         window.reportarPago = async function() {
-            if(!currentUser) return;
+            if (!currentUser) return;
             const refInput = document.getElementById('pay-ref'); const ref = refInput.value.trim();
-            if(!ref) return alert("Ingresa la referencia.");
+            if (!ref) return alert("Ingresa la referencia.");
             const btn = document.getElementById('btn-enviar-pago'); btn.textContent = "Enviando..."; btn.disabled = true;
             try {
                 await addDoc(collection(db, "pagos_pendientes"), { uid: currentUser.uid, email: currentUser.email, referencia: sanitize(ref, 30), fecha: new Date(), estado: "pendiente" });
-                document.getElementById('premium-modal').style.display = 'none'; refInput.value = ""; mostrarToast("⏳ Reporte enviado.");
+                document.getElementById('premium-modal').style.display = 'none'; refInput.value = ''; mostrarToast("⏳ Reporte enviado.");
             } catch(e) { alert("Error al enviar."); } finally { btn.textContent = "Enviar Reporte 🚀"; btn.disabled = false; }
         };
 
+        // ── Toast ─────────────────────────────────────────────────────────────
         function mostrarToast(msg) {
             const toast = document.getElementById('toast'); toast.textContent = msg; toast.style.display = 'block';
             setTimeout(() => { toast.style.display = 'none'; }, 2500);
         }
 
-        onAuthStateChanged(auth, async (user) => { 
-            if (user) { 
-                currentUser = user; document.getElementById('login-screen').style.display = 'none'; document.getElementById('user-controls').style.display = 'flex'; 
+        // ── Auth ──────────────────────────────────────────────────────────────
+        onAuthStateChanged(auth, async user => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('user-controls').style.display = 'flex';
                 const userRef = doc(db, "usuarios", user.uid);
                 try {
-                    const userSnap = await getDoc(userRef);
-                    if (userSnap.exists()) { userPlan = userSnap.data().plan || "gratis"; } 
+                    const snap = await getDoc(userRef);
+                    if (snap.exists()) { userPlan = snap.data().plan || "gratis"; }
                     else { await setDoc(userRef, { email: user.email, plan: "gratis", fecha_registro: new Date() }); userPlan = "gratis"; }
                 } catch(e) { userPlan = "gratis"; }
-                document.getElementById('btn-go-premium').style.display = (userPlan === "gratis") ? 'flex' : 'none';
-                
-                if (pendingImport) {
-                    window.procesarImportacion(pendingImport);
-                    sessionStorage.removeItem('pendingImport');
-                    pendingImport = null;
-                }
-
-                window.cargarHistorialNube(); 
-                if(document.getElementById('tab-precios').classList.contains('active')) window.loadCommunity();
-            } else { currentUser = null; document.getElementById('login-screen').style.display = 'flex'; document.getElementById('user-controls').style.display = 'none'; } 
+                document.getElementById('btn-go-premium').style.display = userPlan === "gratis" ? 'flex' : 'none';
+                if (pendingImport) { window.procesarImportacion(pendingImport); sessionStorage.removeItem('pendingImport'); pendingImport = null; }
+                window.cargarHistorialNube();
+                if (document.getElementById('tab-precios').classList.contains('active')) window.loadCommunity();
+            } else {
+                currentUser = null;
+                document.getElementById('login-screen').style.display = 'flex';
+                document.getElementById('user-controls').style.display = 'none';
+            }
         });
+        window.loginConGoogle = () => signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message));
+        window.logout = () => signOut(auth).then(() => location.reload());
 
-        window.loginConGoogle = function() { signInWithPopup(auth, provider).catch(e => alert("Error: " + e.message)); };
-        window.logout = function() { signOut(auth).then(() => location.reload()); };
-
+        // ── Catálogos ─────────────────────────────────────────────────────────
         window.inicializarCatalogos = function() {
-            const selectAisle = document.getElementById('itemAisle'); Object.keys(catalogoPorCategorias).forEach(cat => selectAisle.add(new Option(cat, cat))); 
-            let optOtro = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); optOtro.style.fontWeight = "bold"; selectAisle.add(optOtro);
-            const selectBrand = document.getElementById('itemBrand'); selectBrand.add(new Option("Sin Marca", "Sin Marca"));
-            marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => selectBrand.add(new Option(m, m))); 
-            let optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; selectBrand.add(optB);
+            const sA = document.getElementById('itemAisle');
+            Object.keys(catalogoPorCategorias).forEach(cat => sA.add(new Option(cat, cat)));
+            const opt = new Option("✏️ Otro (Escribir manual)", "OTRO_PASILLO"); opt.style.fontWeight = "bold"; sA.add(opt);
+
+            const sB = document.getElementById('itemBrand');
+            sB.add(new Option("Sin Marca", "Sin Marca"));
+            marcasOficiales.filter(m => m !== "Sin Marca").sort().forEach(m => sB.add(new Option(m, m)));
+            const optB = new Option("✏️ Otra...", "OTRA"); optB.style.fontWeight = "bold"; sB.add(optB);
+
             supermercadosFijos.forEach(s => document.getElementById('cat-supermercados').innerHTML += `<option value="${s}">`);
         };
 
         window.cargarProductosPorCategoria = function() {
-            const aisle = document.getElementById('itemAisle').value; const sP = document.getElementById('itemCat'); const iL = document.getElementById('itemNameLibre'); const uS = document.getElementById('itemUnit');
-            uS.value = (aisle === "🥬 Verduras y Frutas" || aisle === "🥩 Carnes y Pollos") ? "kg" : "und";
+            const aisle = document.getElementById('itemAisle').value;
+            const sP    = document.getElementById('itemCat');
+            const iL    = document.getElementById('itemNameLibre');
+            const uI    = document.getElementById('itemUnit');
+
+            // Unidad por defecto según pasillo
+            if (aisle === "🥬 Verduras y Frutas" || aisle === "🥩 Carnes y Pollos") {
+                uI.value = "kg";
+                // Para peso, precio total tiene más sentido
+                window.setPriceMode('total');
+            } else {
+                uI.value = "und";
+            }
+
             sP.innerHTML = '<option value="" disabled selected>📦 Selecciona un Producto...</option>';
-            if (aisle === "OTRO_PASILLO") { sP.style.display = "none"; iL.style.display = "block"; iL.value = ""; } 
-            else { sP.disabled = false; sP.style.display = "block"; iL.style.display = "none"; (catalogoPorCategorias[aisle] || []).sort().forEach(p => sP.add(new Option(p, p))); let opt = new Option("✏️ Otro producto...", "OTRO"); opt.style.fontWeight = "bold"; sP.add(opt); }
+            if (aisle === "OTRO_PASILLO") {
+                sP.style.display = "none"; iL.style.display = "block"; iL.value = "";
+            } else {
+                sP.disabled = false; sP.style.display = "block"; iL.style.display = "none";
+                (catalogoPorCategorias[aisle] || []).sort().forEach(p => sP.add(new Option(p, p)));
+                const opt = new Option("✏️ Otro producto...", "OTRO"); opt.style.fontWeight = "bold"; sP.add(opt);
+            }
+            window.updatePricePreview();
         };
 
-        window.verificarTipoProducto = function() { const catSelect = document.getElementById('itemCat'); document.getElementById('itemNameLibre').style.display = catSelect.value === "OTRO" ? "block" : "none"; if (catSelect.value === "Huevos") { document.getElementById('itemUnit').value = "cartón"; } };
-        window.verificarMarca = function() { document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none"; };
+        window.verificarTipoProducto = function() {
+            const v = document.getElementById('itemCat').value;
+            document.getElementById('itemNameLibre').style.display = v === "OTRO" ? "block" : "none";
+            // Huevos → sugerir cartón
+            if (v === "Huevos") document.getElementById('itemUnit').value = "cartón";
+            window.updatePricePreview();
+        };
 
-        window.guardarLocal = function() { localStorage.setItem('mercadoVE_carrito_v2', JSON.stringify(carrito)); localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value); localStorage.setItem('mercadoVE_tasaGuardada', document.getElementById('tasaBCVInput').value); };
-        window.cargarLocal = function() { if(localStorage.getItem('mercadoVE_carrito_v2')) { carrito = JSON.parse(localStorage.getItem('mercadoVE_carrito_v2')); window.renderCarrito(); } if(localStorage.getItem('mercadoVE_tasaBinance')) { document.getElementById('tasaBinanceInput').value = localStorage.getItem('mercadoVE_tasaBinance').replace('.', ','); } if(localStorage.getItem('mercadoVE_tasaGuardada')) { let st = localStorage.getItem('mercadoVE_tasaGuardada'); document.getElementById('tasaBCVInput').value = st.replace('.', ','); tasaActual = parseFloat(st); } };
-        window.vaciarLista = function(sinP = false) { if(sinP || confirm("¿Vaciar calculadora?")) { carrito = []; listaActualId = null; window.renderCarrito(); window.guardarLocal(); } };
+        window.verificarMarca = function() {
+            document.getElementById('itemBrandLibre').style.display = document.getElementById('itemBrand').value === "OTRA" ? "block" : "none";
+        };
 
+        // ── Persistencia local ────────────────────────────────────────────────
+        window.guardarLocal = function() {
+            localStorage.setItem('mercadoVE_carrito_v2', JSON.stringify(carrito));
+            localStorage.setItem('mercadoVE_tasaBinance', document.getElementById('tasaBinanceInput').value);
+            localStorage.setItem('mercadoVE_tasaGuardada', document.getElementById('tasaBCVInput').value);
+        };
+
+        window.cargarLocal = function() {
+            const raw = localStorage.getItem('mercadoVE_carrito_v2');
+            if (raw) { carrito = JSON.parse(raw); window.renderCarrito(); }
+            const tb = localStorage.getItem('mercadoVE_tasaBinance');
+            if (tb) document.getElementById('tasaBinanceInput').value = tb.replace('.', ',');
+            const tg = localStorage.getItem('mercadoVE_tasaGuardada');
+            if (tg) { document.getElementById('tasaBCVInput').value = tg.replace('.', ','); tasaActual = parseFloat(tg); }
+        };
+
+        window.vaciarLista = function(sinP = false) {
+            if (sinP || confirm("¿Vaciar calculadora?")) {
+                carrito = []; listaActualId = null;
+                window.renderCarrito(); window.guardarLocal();
+            }
+        };
+
+        // ── Render carrito ────────────────────────────────────────────────────
         window.renderCarrito = function() {
-            const list = document.getElementById('list'); list.innerHTML = ''; let tUSD = 0;
+            const list = document.getElementById('list');
+            list.innerHTML = '';
+            let tUSD = 0;
+
             carrito.forEach(item => {
-                const itemTotal = item.price * item.qty; tUSD += itemTotal; const li = document.createElement('li'); li.className = "calc-item";
-                
+                // item.price SIEMPRE es el total del ítem (ya calculado al agregar)
+                tUSD += item.price;
+                const li = document.createElement('li'); li.className = "calc-item";
+
+                // Descripción de cantidad: mostramos cómo se calculó
+                let qtyDisplay = item.qty.toString().replace('.', ',');
+                // Si fue modo "por unidad" y qty > 1, mostramos el unitario
+                let subInfo = '';
+                if (item.qtyMode === 'unit' && item.qty > 1 && item.unitPrice) {
+                    subInfo = `<span class="text-muted" style="font-size:11px;">$${item.unitPrice.toFixed(2)} × ${item.qty} ${item.unit || 'und'}</span>`;
+                }
+
                 li.innerHTML = `
-                    <div style="display:flex; flex-direction:column;">
-                        <span class="item-title">${item.qty.toString().replace('.',',')} <span style="font-size:12px; font-weight:bold; color:var(--primary-blue); background:#eef2ff; padding:2px 4px; border-radius:4px; margin: 0 4px;">${item.unit || 'und'}</span> ${item.name}</span>
+                    <div style="display:flex; flex-direction:column; flex:1; min-width:0;">
+                        <span class="item-title" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            ${qtyDisplay} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">${item.unit || 'und'}</span> ${item.name}
+                        </span>
                         <span class="item-store text-muted">📍 ${item.store}</span>
+                        ${subInfo}
                     </div>
-                    <div style="display:flex; align-items:center;">
-                        ${item.price > 0 ? `<span class="item-price" style="font-weight:700;">$${itemTotal.toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}
-                        <button class="btn-edit" onclick="window.editPrice(${item.id})" style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;" title="Editar Precio">✏️</button>
-                        <button class="btn-delete" onclick="window.deleteItem(${item.id})" style="margin-left:10px;">✕</button>
-                    </div>`; 
+                    <div style="display:flex; align-items:center; flex-shrink:0; margin-left:8px;">
+                        ${item.price > 0
+                            ? `<span class="item-price" style="font-weight:700;">$${item.price.toFixed(2)}</span>`
+                            : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}
+                        <button onclick="window.editPrice(${item.id})" title="Editar precio"
+                                style="background:transparent; border:none; cursor:pointer; font-size:16px; margin-left:12px; padding:0;">✏️</button>
+                        <button class="btn-delete" onclick="window.deleteItem(${item.id})" style="margin-left:8px;">✕</button>
+                    </div>`;
                 list.appendChild(li);
             });
-            totalUSD = tUSD; window.updateTotals();
+
+            totalUSD = tUSD;
+            window.updateTotals();
         };
 
-        window.editPrice = async function(id) { 
-            let item = carrito.find(i => i.id === id); 
-            if(!item) return; 
-            let prevPrice = item.price > 0 ? item.price.toString().replace('.', ',') : ''; 
-            let newPriceStr = prompt(`Precio total en $ para:\n${item.name} (${item.unit || 'und'})`, prevPrice); 
-            if(newPriceStr !== null && newPriceStr.trim() !== '') { 
-                let newPrice = parseVE(newPriceStr); 
-                if(!isNaN(newPrice) && newPrice >= 0) { 
-                    item.price = newPrice; 
-                    window.renderCarrito(); 
-                    window.guardarLocal(); 
-                    if(item.isCommunity && newPrice > 0 && prevPrice === '') { 
-                        try { 
-                            await addDoc(collection(db, "productos_comunidad"), { 
-                                producto: item.name, 
-                                precioUSD: newPrice, 
-                                unidad: item.unit || "und", 
-                                supermercado: item.store, 
-                                fecha: new Date(), 
-                                reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo" 
-                            }); 
-                        } catch(e) {} 
-                    } 
-                } else {
-                    alert("Precio inválido."); 
-                }
-            } 
+        // ── Editar precio de un ítem ya agregado ──────────────────────────────
+        window.editPrice = async function(id) {
+            const item = carrito.find(i => i.id === id);
+            if (!item) return;
+
+            // Siempre pedimos el TOTAL del ítem para simplicidad
+            const prev = item.price > 0 ? item.price.toFixed(2).replace('.', ',') : '';
+            const newStr = prompt(`Precio TOTAL para:\n${item.qty} ${item.unit || 'und'} ${item.name}\n\n(Ingresa el monto total que pagarás por este ítem)`, prev);
+            if (newStr === null || newStr.trim() === '') return;
+
+            const newPrice = parseVE(newStr);
+            if (isNaN(newPrice) || newPrice < 0) return alert("Precio inválido.");
+
+            item.price = newPrice;
+            item.unitPrice = item.qty > 0 ? newPrice / item.qty : newPrice;
+            window.renderCarrito(); window.guardarLocal();
+
+            // Reportar a comunidad si aplica
+            if (item.isCommunity && newPrice > 0 && prev === '') {
+                try {
+                    await addDoc(collection(db, "productos_comunidad"), {
+                        producto: item.name, precioUSD: newPrice, unidad: item.unit || "und",
+                        supermercado: item.store, fecha: new Date(),
+                        reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo"
+                    });
+                } catch(e) {}
+            }
         };
 
+        // ── Agregar ítem ──────────────────────────────────────────────────────
         window.addItem = async function() {
-            const aisle = document.getElementById('itemAisle').value; const cat = document.getElementById('itemCat').value; const libre = document.getElementById('itemNameLibre').value; const bCat = document.getElementById('itemBrand').value; const bLibre = document.getElementById('itemBrandLibre').value;
-            const qty = parseVE(document.getElementById('itemQty').value) || 1; const unit = document.getElementById('itemUnit').value; const price = parseVE(document.getElementById('itemPrice').value); const store = document.getElementById('storeName').value || "No especificado";
-            if(!aisle || (aisle !== "OTRO_PASILLO" && !cat)) return alert("Completa los datos.");
+            const aisle  = document.getElementById('itemAisle').value;
+            const cat    = document.getElementById('itemCat').value;
+            const libre  = document.getElementById('itemNameLibre').value;
+            const bCat   = document.getElementById('itemBrand').value;
+            const bLibre = document.getElementById('itemBrandLibre').value;
+
+            const qty    = parseVE(document.getElementById('itemQty').value) || 1;
+            const unit   = document.getElementById('itemUnit').value || 'und';
+            const rawPrice = parseVE(document.getElementById('itemPrice').value);
+            const store  = document.getElementById('storeName').value || "No especificado";
+
+            if (!aisle || (aisle !== "OTRO_PASILLO" && !cat)) return alert("Selecciona un pasillo y producto.");
+            if (!bCat) return alert("Selecciona una marca.");
+
             let fName = (aisle === "OTRO_PASILLO" || cat === "OTRO") ? sanitize(libre, 50) : cat;
-            fName += (bCat === "OTRA" ? ` (${sanitize(bLibre, 30)})` : (bCat !== "Sin Marca" ? ` (${bCat})` : ""));
-            carrito.push({ id: Date.now(), name: fName, price, qty, unit, store }); window.renderCarrito(); window.guardarLocal();
+            if (!fName) return alert("Ingresa el nombre del producto.");
+            fName += bCat === "OTRA"
+                ? ` (${sanitize(bLibre, 30)})`
+                : (bCat !== "Sin Marca" ? ` (${bCat})` : "");
+
+            // ── LÓGICA DE PRECIO ────────────────────────────────────────────
+            // Si priceMode === 'total': price = rawPrice (precio total del ítem, sin multiplicar)
+            // Si priceMode === 'unit':  price = rawPrice × qty  (precio unitario × cantidad)
+            let finalPrice = 0;
+            let unitPrice  = rawPrice;
+
+            if (rawPrice > 0) {
+                if (priceMode === 'unit') {
+                    finalPrice = rawPrice * qty;
+                    unitPrice  = rawPrice;
+                } else {
+                    finalPrice = rawPrice;
+                    unitPrice  = qty > 0 ? rawPrice / qty : rawPrice;
+                }
+            }
+            // ────────────────────────────────────────────────────────────────
+
+            carrito.push({
+                id: Date.now(),
+                name: fName,
+                price: finalPrice,      // ← siempre el TOTAL del ítem
+                unitPrice: unitPrice,   // ← referencia del precio por unidad
+                qty,
+                unit,
+                store,
+                qtyMode: priceMode,     // guardamos cómo se calculó
+                isCommunity: aisle !== "OTRO_PASILLO" && cat !== "OTRO"
+            });
+
+            window.renderCarrito(); window.guardarLocal();
+
+            // Subir a comunidad si aplica
+            if (carrito[carrito.length - 1].isCommunity && finalPrice > 0) {
+                try {
+                    await addDoc(collection(db, "productos_comunidad"), {
+                        producto: fName, precioUSD: finalPrice, unidad: unit,
+                        supermercado: store, fecha: new Date(),
+                        reportadoPor: currentUser ? sanitize(currentUser.displayName.split(' ')[0], 15) : "Anónimo"
+                    });
+                } catch(e) {}
+            }
+
+            // Limpiar campos (excepto pasillo, supermercado y marca para rapidez)
+            document.getElementById('itemCat').value = "";
+            document.getElementById('itemCat').innerHTML = '<option value="" disabled selected>📦 Selecciona un Producto...</option>';
+            document.getElementById('itemCat').disabled = true;
+            document.getElementById('itemAisle').value = "";
+            document.getElementById('itemNameLibre').value = ""; document.getElementById('itemNameLibre').style.display = "none";
+            document.getElementById('itemBrandLibre').value = ""; document.getElementById('itemBrandLibre').style.display = "none";
+            document.getElementById('itemBrand').value = "";
+            document.getElementById('itemQty').value = '1';
+            document.getElementById('itemUnit').value = 'und';
             document.getElementById('itemPrice').value = '';
+            document.getElementById('price-preview').textContent = '';
+            window.setPriceMode('total'); // reset a modo por defecto
         };
 
         window.deleteItem = function(id) { carrito = carrito.filter(i => i.id !== id); window.renderCarrito(); window.guardarLocal(); };
-        window.updateTotals = function() { document.getElementById('totalUSD').textContent = totalUSD.toFixed(2); const tVES = totalUSD * tasaActual; document.getElementById('totalVES').textContent = tVES.toFixed(2); const tb = parseVE(document.getElementById('tasaBinanceInput').value); document.getElementById('totalUSDT').textContent = tb > 0 ? (tVES / tb).toFixed(2) : "0.00"; };
 
-        window.guardarHistorialNube = async function() { 
-            if(!currentUser) return alert("Inicia sesión."); 
-            if(userPlan === "gratis" && historialNube.length >= 1) { return window.showPremiumModal(); }
-            let n = prompt("Nombre:"); if(!n) return;
-            try { await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), { nombre: sanitize(n, 50), items_array: carrito, total: totalUSD, fecha: new Date().toLocaleDateString(), timestamp: new Date(), tasaBCV_guardada: tasaActual }); window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial'); } catch(e) { alert("Error."); }
+        // ── Totales ───────────────────────────────────────────────────────────
+        window.updateTotals = function() {
+            document.getElementById('totalUSD').textContent = totalUSD.toFixed(2);
+            const tVES = totalUSD * tasaActual;
+            document.getElementById('totalVES').textContent = tVES.toFixed(2);
+            const tb = parseVE(document.getElementById('tasaBinanceInput').value);
+            if (tb > 0 && tVES > 0) {
+                const tUSDT = tVES / tb;
+                document.getElementById('totalUSDT').textContent = tUSDT.toFixed(2);
+                const ahorro = totalUSD - tUSDT;
+                const txt = document.getElementById('ahorroText');
+                if (ahorro > 0)      { txt.textContent = `💰 Ahorraste $${ahorro.toFixed(2)}`; txt.className = "ahorro-text text-green"; }
+                else if (ahorro < 0) { txt.textContent = `⚠️ Pierdes $${Math.abs(ahorro).toFixed(2)}`; txt.className = "ahorro-text text-red"; }
+                else                 { txt.textContent = "Sin diferencia cambiaria."; txt.className = "ahorro-text text-muted"; }
+            } else { document.getElementById('totalUSDT').textContent = "0.00"; document.getElementById('ahorroText').textContent = ''; }
         };
 
-        window.cargarHistorialNube = async function() { 
-            if(!currentUser) return; 
-            const hl = document.getElementById('historial-list'); 
-            hl.innerHTML = '<p class="text-muted" style="text-align:center;">Sincronizando... ☁️</p>'; 
-            try { 
-                const snapshot = await getDocs(query(collection(db, `usuarios/${currentUser.uid}/historial`))); 
-                historialNube = []; 
-                snapshot.forEach(doc => historialNube.push({ id: doc.id, ...doc.data() })); 
-                historialNube.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds); 
-                window.renderHistorialPantalla(); 
-            } catch(e) { hl.innerHTML = '<p class="text-red" style="text-align:center;">Error de conexión.</p>'; } 
-        }
+        window.updateRatesManual = function() {
+            tasaActual = parseVE(document.getElementById('tasaBCVInput').value);
+            window.updateTotals(); window.guardarLocal();
+        };
 
-        window.renderHistorialPantalla = function() { 
-            const hl = document.getElementById('historial-list'); 
-            if(historialNube.length === 0) return hl.innerHTML = '<p class="text-muted" style="text-align:center;">No hay listas guardadas.</p>'; 
-            hl.innerHTML = ''; 
-            historialNube.forEach(compra => { 
-                const div = document.createElement('div'); div.className = 'historial-card'; 
-                
-                let btnCompartir = `<button onclick="window.compartirLista('${compra.id}')" style="background:transparent; color:#25D366; border:1px solid #25D366; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600; margin-right:8px;">📲 Compartir</button>`;
-                let btnCargar = compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue" style="margin-right: 8px;">✏️ Cargar</button>` : ''; 
-                
-                let safeListHTML = ""; 
-                if (compra.items_array) { 
-                    compra.items_array.forEach(item => { 
-                        const sName = escapeHTML(item.name); const sStore = escapeHTML(item.store); const sUnit = escapeHTML(item.unit || "und"); let displayQty = item.qty.toString().replace('.', ','); 
-                        safeListHTML += `<li style="padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;"><div style="display:flex; flex-direction:column;"><span style="font-weight:600; font-size:14px;">${displayQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span><span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore}</span></div><div>${item.price > 0 ? `<span style="font-weight: 700; font-size: 15px;">$${(item.price * item.qty).toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div></li>`; 
-                    }); 
-                } 
-                div.innerHTML = `<div class="historial-header" onclick="window.toggleHistorial('${compra.id}')" style="cursor:pointer; display:flex; justify-content:space-between; align-items:center;"><div><b class="text-main" style="font-size: 15px;">📝 ${escapeHTML(compra.nombre)}</b><div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div></div><div style="text-align: right;"><b class="text-green" style="font-size: 16px;">$${(compra.total || 0).toFixed(2)}</b></div></div><div id="detalles-${compra.id}" class="historial-details" style="display:none; padding-top:10px;"><ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul><div style="text-align: right; margin-top: 15px; display:flex; justify-content: flex-end;">${btnCompartir}${btnCargar}<button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button></div></div>`; 
-                hl.appendChild(div); 
-            }); 
-        }
+        // ── Historial nube ────────────────────────────────────────────────────
+        window.guardarHistorialNube = async function() {
+            if (!currentUser) return alert("Inicia sesión.");
+            if (userPlan === "gratis" && historialNube.length >= 1) return window.showPremiumModal();
+            const n = prompt("Nombre para esta lista:");
+            if (!n) return;
+            try {
+                await addDoc(collection(db, `usuarios/${currentUser.uid}/historial`), {
+                    nombre: sanitize(n, 50), items_array: carrito, total: totalUSD,
+                    fecha: new Date().toLocaleDateString(), timestamp: new Date(), tasaBCV_guardada: tasaActual
+                });
+                window.vaciarLista(true); window.cargarHistorialNube(); window.switchTab('historial');
+            } catch(e) { alert("Error al guardar."); }
+        };
 
-        window.toggleHistorial = function(id) { const d = document.getElementById(`detalles-${id}`); d.style.display = (d.style.display === "none" || d.style.display === "") ? "block" : "none"; }
-        window.cargarA_Calculadora = function(id) { if (carrito.length > 0) if (!confirm("¿Reemplazar calculadora actual?")) return; let compra = historialNube.find(c => c.id === id); if (compra && compra.items_array) { carrito = compra.items_array; if(compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual.toString().replace('.', ','); } if(compra.tasaBinance_guardada) { document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada.toString().replace('.', ','); } listaActualId = id; listaActualNombre = compra.nombre; window.renderCarrito(); window.guardarLocal(); window.switchTab('lista'); } }
-        window.borrarHistorialNube = async function(id) { if(!currentUser) return; if(confirm("¿Eliminar para siempre?")) { try { await deleteDoc(doc(db, `usuarios/${currentUser.uid}/historial`, id)); window.cargarHistorialNube(); } catch(e) { alert("Error al borrar."); } } }
+        window.cargarHistorialNube = async function() {
+            if (!currentUser) return;
+            const hl = document.getElementById('historial-list');
+            hl.innerHTML = '<p class="text-muted" style="text-align:center;">Sincronizando... ☁️</p>';
+            try {
+                const snap = await getDocs(query(collection(db, `usuarios/${currentUser.uid}/historial`)));
+                historialNube = []; snap.forEach(d => historialNube.push({ id: d.id, ...d.data() }));
+                historialNube.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+                window.renderHistorialPantalla();
+            } catch(e) { hl.innerHTML = '<p class="text-red" style="text-align:center;">Error de conexión.</p>'; }
+        };
 
+        window.renderHistorialPantalla = function() {
+            const hl = document.getElementById('historial-list');
+            if (historialNube.length === 0) return hl.innerHTML = '<p class="text-muted" style="text-align:center;">No hay listas guardadas.</p>';
+            hl.innerHTML = '';
+            historialNube.forEach(compra => {
+                const div = document.createElement('div'); div.className = 'historial-card';
+                let safeListHTML = '';
+                if (compra.items_array) {
+                    compra.items_array.forEach(item => {
+                        const sName  = escapeHTML(item.name);
+                        const sStore = escapeHTML(item.store);
+                        const sUnit  = escapeHTML(item.unit || "und");
+                        const dQty   = item.qty.toString().replace('.', ',');
+                        // item.price ya es el total
+                        let subInfo = '';
+                        if (item.qtyMode === 'unit' && item.qty > 1 && item.unitPrice) {
+                            subInfo = `<span style="font-size:11px; color:var(--text-muted);">$${item.unitPrice.toFixed(2)} × ${item.qty}</span>`;
+                        }
+                        safeListHTML += `
+                            <li style="padding:10px 0; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span style="font-weight:600; font-size:14px;">${dQty} <span style="font-weight:normal; font-size:12px; color:var(--text-muted);">${sUnit}</span> ${sName}</span>
+                                    <span class="text-muted" style="font-size:11px; margin-top:2px;">📍 ${sStore} ${subInfo}</span>
+                                </div>
+                                <div>${item.price > 0 ? `<span style="font-weight:700; font-size:15px;">$${item.price.toFixed(2)}</span>` : `<span style="color:#d97706; font-size:12px; font-weight:bold;">Pendiente ⏳</span>`}</div>
+                            </li>`;
+                    });
+                }
+                div.innerHTML = `
+                    <div class="historial-header" onclick="window.toggleHistorial('${compra.id}')">
+                        <div>
+                            <b class="text-main" style="font-size:15px;">📝 ${escapeHTML(compra.nombre)}</b>
+                            <div class="text-muted" style="font-size:11px; margin-top:4px;">${compra.fecha}</div>
+                        </div>
+                        <div style="text-align:right;"><b class="text-green" style="font-size:16px;">$${(compra.total || 0).toFixed(2)}</b></div>
+                    </div>
+                    <div id="detalles-${compra.id}" class="historial-details" style="display:none; padding-top:10px;">
+                        <ul style="margin-bottom:15px; list-style:none; padding:0;">${safeListHTML}</ul>
+                        <div style="text-align:right; margin-top:15px; display:flex; justify-content:flex-end; gap:8px; flex-wrap:wrap;">
+                            <button onclick="window.compartirLista('${compra.id}')" style="background:transparent; color:#25D366; border:1px solid #25D366; padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">📲 Compartir</button>
+                            ${compra.items_array ? `<button onclick="window.cargarA_Calculadora('${compra.id}')" class="btn-secondary blue">✏️ Cargar</button>` : ''}
+                            <button onclick="window.borrarHistorialNube('${compra.id}')" style="background:transparent; color:var(--danger-red); border:1px solid var(--danger-red); padding:8px 15px; border-radius:8px; cursor:pointer; font-weight:600;">🗑️ Eliminar</button>
+                        </div>
+                    </div>`;
+                hl.appendChild(div);
+            });
+        };
+
+        window.toggleHistorial   = id => { const d = document.getElementById(`detalles-${id}`); d.style.display = d.style.display === "block" ? "none" : "block"; };
+        window.borrarHistorialNube = async id => { if (!currentUser) return; if (confirm("¿Eliminar para siempre?")) { try { await deleteDoc(doc(db, `usuarios/${currentUser.uid}/historial`, id)); window.cargarHistorialNube(); } catch(e) { alert("Error."); } } };
+
+        window.cargarA_Calculadora = function(id) {
+            if (carrito.length > 0 && !confirm("¿Reemplazar la calculadora actual?")) return;
+            const compra = historialNube.find(c => c.id === id);
+            if (compra && compra.items_array) {
+                carrito = compra.items_array;
+                if (compra.tasaBCV_guardada) { tasaActual = compra.tasaBCV_guardada; document.getElementById('tasaBCVInput').value = tasaActual.toString().replace('.', ','); }
+                if (compra.tasaBinance_guardada) document.getElementById('tasaBinanceInput').value = compra.tasaBinance_guardada.toString().replace('.', ',');
+                listaActualId = id; listaActualNombre = compra.nombre;
+                window.renderCarrito(); window.guardarLocal(); window.switchTab('lista');
+            }
+        };
+
+        // ── Comunidad ─────────────────────────────────────────────────────────
         window.loadCommunity = async function() {
-            const listEl = document.getElementById('precios-list'); listEl.
+            const listEl = document.getElementById('precios-list');
+            listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Cargando...</p>';
+            try {
+                const snap = await getDocs(query(collection(db, "productos_comunidad")));
+                let docs = []; snap.forEach(d => docs.push(d.data()));
+                let agrupados = {};
+                docs.forEach(data => {
+                    const prod = data.producto, sup = data.supermercado || "N/A", autor = data.reportadoPor || "Anónimo", uni = data.unidad || "und";
+                    if (!agrupados[prod]) agrupados[prod] = {};
+                    agrupados[prod][sup] = { p: data.precioUSD, a: autor, u: uni };
+                });
+                listEl.innerHTML = '';
+                const nombres = Object.keys(agrupados).sort();
+                if (nombres.length === 0) return listEl.innerHTML = '<p class="text-muted" style="text-align:center;">Sin datos aún.</p>';
+                nombres.forEach(prod => {
+                    const div = document.createElement('div'); div.className = 'prod-group';
+                    let html = `<div class="prod-header">🛒 ${escapeHTML(prod)}</div><ul class="prod-store-list">`;
+                    const tiendas = Object.keys(agrupados[prod]).sort((a, b) => agrupados[prod][a].p - agrupados[prod][b].p);
+                    tiendas.forEach((t, i) => {
+                        const info = agrupados[prod][t];
+                        const pSafe = escapeHTML(prod).replace(/'/g, "\\'");
+                        const tSafe = escapeHTML(t).replace(/'/g, "\\'");
+                        const uSafe = escapeHTML(info.u).replace(/'/g, "\\'");
+                        const actionBtn = userPlan === "gratis"
+                            ? `<button onclick="window.showPremiumModal()" class="locked-btn" title="Premium">🔒</button>`
+                            : `<button onclick="window.addFromCommunity('${pSafe}', ${info.p}, '${uSafe}', '${tSafe}')" style="background:var(--primary-green); color:white; border:none; border-radius:6px; padding:4px 8px; font-weight:bold; cursor:pointer; font-size:14px;">➕</button>`;
+                        html += `
+                            <li class="prod-store-item">
+                                <div style="display:flex; flex-direction:column;">
+                                    <span class="text-main">${i === 0 && tiendas.length > 1 ? '🏆' : '📍'} ${escapeHTML(t)}</span>
+                                    <span class="text-muted" style="font-size:11px; margin-top:2px;">👤 ${escapeHTML(info.a)}</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:10px;">
+                                    <span class="${i === 0 ? 'precio-barato' : 'precio-normal text-main'}">$${info.p.toFixed(2)} <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">x ${escapeHTML(info.u)}</span></span>
+                                    ${actionBtn}
+                                </div>
+                            </li>`;
+                    });
+                    div.innerHTML = html + '</ul>'; listEl.appendChild(div);
+                });
+            } catch(e) { listEl.innerHTML = '<p class="text-red" style="text-align:center;">Error al cargar.</p>'; }
+        };
+
+        window.filterCommunity = function() {
+            const q = document.getElementById('searchCommunity').value.toLowerCase();
+            document.querySelectorAll('.prod-group').forEach(g => { g.style.display = g.innerText.toLowerCase().includes(q) ? 'block' : 'none'; });
+        };
+
+        // addFromCommunity: el precio de comunidad es el precio reportado (se trata como total para 1 und)
+        window.addFromCommunity = function(name, price, unit, store) {
+            carrito.push({ id: Date.now(), name, price: parseFloat(price), unitPrice: parseFloat(price), qty: 1, unit, store, isCommunity: true, qtyMode: 'total' });
+            window.renderCarrito(); window.guardarLocal(); mostrarToast("✅ Agregado a la calculadora");
+        };
+
+        // ── Tab switching ─────────────────────────────────────────────────────
+        window.switchTab = function(t) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${t}`).classList.add('active');
+            document.getElementById(`btn-${t}`).classList.add('active');
+            if (t === 'precios') window.loadCommunity();
+            if (t === 'historial') window.cargarHistorialNube();
+        };
+
+        // ── Fetch tasas externas ──────────────────────────────────────────────
+        window.fetchRates = async function() {
+            try {
+                const res  = await fetch('https://pydolarvenezuela-api.vercel.app/api/v1/dollar');
+                const data = await res.json();
+                const inBcv = document.getElementById('tasaBCVInput');
+                const inBin = document.getElementById('tasaBinanceInput');
+                if (!inBcv.value || parseVE(inBcv.value) === 0) inBcv.value = data.monitors.bcv.price.toFixed(2).replace('.', ',');
+                if (!inBin.value || parseVE(inBin.value) === 0) inBin.value = data.monitors.binance.price.toFixed(2).replace('.', ',');
+                tasaActual = parseVE(inBcv.value);
+                window.guardarLocal(); window.updateTotals();
+            } catch(e) { window.cargarLocal(); window.updateTotals(); }
+        };
+
+        // ── Init ──────────────────────────────────────────────────────────────
+        window.inicializarCatalogos();
+        window.cargarLocal();
+        window.fetchRates();
+    </script>
+</body>
+</html>
